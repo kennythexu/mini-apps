@@ -66,7 +66,7 @@
 <body>
 
 <h1>🎯 Quit W2 by 30</h1>
-<p class="subtitle">Kenny Xu — Target: $500K/yr combined income by April 2028</p>
+<p class="subtitle">Kenny Xu — Target: $500K/yr from non-W2 streams by April 2028</p>
 
 <div class="grid">
 
@@ -111,7 +111,7 @@
     </div>
     <div class="stats-row" style="margin-top:8px">
       <div class="stat"><div class="sval pos" id="rover-net-annual">$0</div><div class="lbl">Rover Net/yr</div></div>
-      <div class="stat"><div class="sval" id="snap-annual">$0</div><div class="lbl">Snap/yr</div></div>
+      <div class="stat"><div class="sval" style="color:var(--muted)" id="snap-annual">$0</div><div class="lbl">Snap W2 (not counted)</div></div>
       <div class="stat"><div class="sval" id="other-annual">$0</div><div class="lbl">Lunouri+Other/yr</div></div>
     </div>
   </div>
@@ -130,7 +130,7 @@
     <div class="pnl-row"><span class="pnl-label">Rover Revenue</span><span class="pnl-val" id="sc-rev">$0</span></div>
     <div class="pnl-row"><span class="pnl-label">Net Earnings / mo</span><span class="pnl-val pos" id="sc-net">$0</span></div>
     <div class="pnl-row"><span class="pnl-label">Net Earnings / yr</span><span class="pnl-val" id="sc-net-yr">$0</span></div>
-    <div class="pnl-row total"><span class="pnl-label">Total Annual (all streams)</span><span class="pnl-val" id="sc-total">$0</span></div>
+    <div class="pnl-row total"><span class="pnl-label">Total Annual (non-W2)</span><span class="pnl-val" id="sc-total">$0</span></div>
     <div style="margin-top:8px"><span class="tag" id="sc-tag">—</span></div>
   </div>
 
@@ -198,14 +198,16 @@ function update() {
   $('pnl-net').className = 'pnl-val ' + (net >= 0 ? 'pos' : 'neg');
   $('pnl-net-yr').textContent = fmt(net * 12);
 
-  // Annual
-  const monthlyIncome = v.snap + net + v.lunouri + v.other;
-  const annual = monthlyIncome * 12;
-  const pct = Math.min(100, (annual / TARGET) * 100);
-  const gap = Math.max(0, TARGET - annual);
+  // Annual — $500K target is NON-W2 only (excludes Snap)
+  const nonW2Monthly = net + v.lunouri + v.other;
+  const nonW2Annual = nonW2Monthly * 12;
+  const totalMonthly = v.snap + nonW2Monthly;
+  const totalAnnual = totalMonthly * 12;
+  const pct = Math.min(100, (nonW2Annual / TARGET) * 100);
+  const gap = Math.max(0, TARGET - nonW2Annual);
 
-  $('annual-income').textContent = fmt(annual);
-  $('annual-sub').textContent = `${fmt(monthlyIncome)}/mo — Snap ${fmt(v.snap)} + Rover ${fmt(net)} + Lunouri ${fmt(v.lunouri)}` + (v.other ? ` + Other ${fmt(v.other)}` : '');
+  $('annual-income').textContent = fmt(nonW2Annual);
+  $('annual-sub').textContent = `${fmt(nonW2Monthly)}/mo non-W2 — Rover ${fmt(net)} + Lunouri ${fmt(v.lunouri)}` + (v.other ? ` + Other ${fmt(v.other)}` : '') + ` (+ Snap ${fmt(v.snap)} W2)`;
   $('progress-fill').style.width = pct + '%';
   $('progress-fill').style.background = pct >= 100 ? 'var(--green)' : pct >= 70 ? 'var(--yellow)' : 'var(--accent)';
   $('pct-label').textContent = pct.toFixed(1) + '%';
@@ -222,10 +224,12 @@ function update() {
   $('snap-annual').textContent = fmt(v.snap * 12);
   $('other-annual').textContent = fmt((v.lunouri + v.other) * 12);
 
+  const annual = nonW2Annual; // for checklist/timeline references
+
   // Scenarios
   const scRev = scenarios[currentScenario] || v.roverRev;
   const scNet = roverNet(scRev, v.netMargin);
-  const scAnnual = (v.snap + scNet + v.lunouri + v.other) * 12;
+  const scAnnual = (scNet + v.lunouri + v.other) * 12;
   $('sc-rev').textContent = fmt(scRev);
   $('sc-net').textContent = fmt(scNet);
   $('sc-net-yr').textContent = fmt(scNet * 12);
@@ -238,7 +242,7 @@ function update() {
 
   // Checklist
   const checks = [
-    { label: `Combined income ≥ $500K/yr (currently ${fmt(annual)})`, status: annual >= TARGET ? 'on' : annual >= TARGET*0.7 ? 'warn' : 'risk' },
+    { label: `Non-W2 income ≥ $500K/yr (currently ${fmt(annual)})`, status: annual >= TARGET ? 'on' : annual >= TARGET*0.7 ? 'warn' : 'risk' },
     { label: `Rover revenue ≥ $100K/mo (currently ${fmt(v.roverRev)})`, status: v.roverRev >= 100000 ? 'on' : v.roverRev >= 80000 ? 'warn' : 'risk' },
     { label: `Rover net margin ≥ 20% (currently ${(v.netMargin*100).toFixed(1)}%)`, status: v.netMargin >= 0.20 ? 'on' : v.netMargin >= 0.15 ? 'warn' : 'risk' },
     { label: `Lunouri profitable ≥ $3K/mo (currently ${fmt(v.lunouri)})`, status: v.lunouri >= 3000 ? 'on' : v.lunouri > 0 ? 'warn' : 'risk' },
