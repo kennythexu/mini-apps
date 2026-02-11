@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rover Lead Pipeline Simulator</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; padding: 16px; min-height: 100vh; }
+  h1 { font-size: 1.4rem; margin-bottom: 4px; }
+  .subtitle { color: #94a3b8; margin-bottom: 20px; font-size: 0.85rem; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1100px; }
+  @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: #1e293b; border-radius: 12px; padding: 18px; }
+  .card h2 { font-size: 1rem; margin-bottom: 14px; color: #38bdf8; }
+  .section-label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin: 14px 0 8px; }
+  .input-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .input-row label { font-size: 0.82rem; color: #cbd5e1; flex: 1; }
+  .input-row input { width: 90px; padding: 5px 8px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 0.85rem; text-align: right; }
+  .input-row .unit { font-size: 0.72rem; color: #64748b; width: 36px; text-align: left; margin-left: 5px; }
+  .data-source { font-size: 0.7rem; color: #475569; font-style: italic; }
+  .divider { border: none; border-top: 1px solid #334155; margin: 14px 0; }
+  .results { margin-top: 6px; }
+  .result-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #1e293b; font-size: 0.85rem; }
+  .result-row.highlight { color: #22d3ee; font-weight: 600; font-size: 1rem; border-bottom: none; padding-top: 10px; }
+  .result-row.sub { padding-left: 12px; }
+  .result-label { color: #94a3b8; font-size: 0.82rem; }
+  .gap-card { grid-column: 1 / -1; }
+  .goal-bar-wrap { margin-top: 10px; }
+  .goal-bar-bg { background: #334155; border-radius: 8px; height: 28px; position: relative; overflow: hidden; }
+  .goal-bar-fill { height: 100%; border-radius: 8px; transition: width 0.4s; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; font-size: 0.75rem; font-weight: 600; }
+  .goal-labels { display: flex; justify-content: space-between; font-size: 0.75rem; color: #64748b; margin-top: 4px; }
+  .scenario-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 8px; }
+  .scenario-table th { text-align: left; color: #64748b; padding: 6px 8px; border-bottom: 1px solid #334155; font-weight: 500; }
+  .scenario-table td { padding: 6px 8px; border-bottom: 1px solid #1e293b; }
+  .scenario-table .num { text-align: right; }
+  .green { color: #4ade80; }
+  .red { color: #f87171; }
+  .yellow { color: #fbbf24; }
+  .note { font-size: 0.72rem; color: #475569; margin-top: 12px; line-height: 1.4; }
+  .channel-row { display: grid; grid-template-columns: 1fr 70px 70px; gap: 6px; align-items: center; margin-bottom: 8px; }
+  .channel-row label { font-size: 0.82rem; color: #cbd5e1; }
+  .channel-row input { padding: 5px 6px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 0.82rem; text-align: right; width: 100%; }
+  .channel-header { display: grid; grid-template-columns: 1fr 70px 70px; gap: 6px; margin-bottom: 6px; }
+  .channel-header span { font-size: 0.7rem; color: #64748b; text-align: right; }
+  .channel-header span:first-child { text-align: left; }
+</style>
+</head>
+<body>
+
+<h1>🚀 Rover Lead Pipeline Simulator</h1>
+<p class="subtitle">Grounded in real Job Costing + Airtable data (Aug 2025 – Feb 2026). All defaults are actual numbers.</p>
+
+<div class="grid">
+  <!-- INPUTS: LEAD CHANNELS -->
+  <div class="card">
+    <h2>📊 Lead Channels (New Customers/mo)</h2>
+    <p class="data-source">Defaults from Airtable Lead Nurturing, 6mo avg (Aug '25 – Jan '26)</p>
+
+    <div class="channel-header"><span>Channel</span><span>Leads/mo</span><span>Conv %</span></div>
+
+    <div class="channel-row">
+      <label>Facebook Ads</label>
+      <input type="number" id="fb_leads" value="462">
+      <input type="number" id="fb_conv" value="11.2" step="0.5">
+    </div>
+    <div class="channel-row">
+      <label>Quote Form</label>
+      <input type="number" id="qf_leads" value="100">
+      <input type="number" id="qf_conv" value="34.0" step="0.5">
+    </div>
+    <div class="channel-row">
+      <label>LSA</label>
+      <input type="number" id="lsa_leads" value="40">
+      <input type="number" id="lsa_conv" value="18.4" step="0.5">
+    </div>
+    <div class="channel-row">
+      <label>LSA Message</label>
+      <input type="number" id="lsam_leads" value="15">
+      <input type="number" id="lsam_conv" value="22.8" step="0.5">
+    </div>
+    <div class="channel-row">
+      <label>Thumbtack</label>
+      <input type="number" id="tt_leads" value="60">
+      <input type="number" id="tt_conv" value="21.1" step="0.5">
+    </div>
+    <div class="channel-row">
+      <label>Misc / Referral</label>
+      <input type="number" id="misc_leads" value="167">
+      <input type="number" id="misc_conv" value="7.3" step="0.5">
+    </div>
+
+    <hr class="divider">
+    <h2>💰 Job Economics</h2>
+    <p class="data-source">Defaults from Job Costing Sheet, 6mo avg</p>
+
+    <div class="input-row"><label>Avg one-time job value</label><input type="number" id="avg_onetime" value="225" step="5"><span class="unit">$</span></div>
+    <div class="input-row"><label>Avg recurring visit value</label><input type="number" id="avg_recurring" value="163" step="5"><span class="unit">$</span></div>
+    <div class="input-row"><label>% of new bookings → recurring</label><input type="number" id="recur_pct" value="40" step="1"><span class="unit">%</span></div>
+    <div class="input-row"><label>Avg visits/mo per recurring client</label><input type="number" id="visits_mo" value="1.6" step="0.1"><span class="unit">x</span></div>
+    <div class="input-row"><label>Avg gross margin</label><input type="number" id="margin" value="45" step="1"><span class="unit">%</span></div>
+    <div class="input-row"><label>Monthly churn (recurring clients)</label><input type="number" id="churn" value="8" step="0.5"><span class="unit">%</span></div>
+
+    <hr class="divider">
+    <h2>🎯 Current Recurring Base</h2>
+    <p class="data-source">From Jan 2026 Job Costing data</p>
+
+    <div class="input-row"><label>Active recurring clients</label><input type="number" id="base_clients" value="248"><span class="unit"></span></div>
+    <div class="input-row"><label>Recurring revenue/mo</label><input type="number" id="base_rev" value="56000" step="1000"><span class="unit">$</span></div>
+
+    <hr class="divider">
+    <div class="input-row"><label><strong>Monthly Revenue Goal</strong></label><input type="number" id="goal" value="100000" step="5000"><span class="unit">$</span></div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="card">
+    <h2>📈 Monthly Revenue Projection</h2>
+    <div class="results" id="results"></div>
+
+    <hr class="divider">
+    <h2 style="margin-top:8px;">📊 Revenue Composition</h2>
+    <div id="bar_chart" style="margin-top:12px;"></div>
+
+    <hr class="divider">
+    <h2 style="margin-top:8px;">🔻 Lead → Booking Funnel</h2>
+    <div id="funnel" style="margin-top:12px;"></div>
+
+    <div class="note">
+      <strong>How this works:</strong> Recurring revenue = your existing client base generating repeat visits. 
+      New bookings add one-time revenue immediately, and a % convert to recurring clients (adding to next month's base). 
+      Churn reduces the recurring base each month. This is a steady-state snapshot — not a compounding projection.
+    </div>
+  </div>
+
+  <!-- 12-MONTH PROJECTION CHART -->
+  <div class="card gap-card">
+    <h2>📈 12-Month Revenue Projection</h2>
+    <p style="font-size:0.78rem;color:#64748b;margin-bottom:10px;">Shows how revenue grows as new recurring clients compound monthly. Drag the slider to see different growth scenarios.</p>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+      <label style="font-size:0.8rem;color:#94a3b8;">Lead Growth Rate:</label>
+      <input type="range" id="growth_slider" min="-10" max="30" value="0" style="flex:1;accent-color:#38bdf8;">
+      <span id="growth_label" style="font-size:0.85rem;color:#38bdf8;min-width:50px;text-align:right;">+0%</span>
+    </div>
+    <canvas id="projection_chart" width="1000" height="380" style="width:100%;border-radius:8px;"></canvas>
+    <div id="chart_tooltip" style="display:none;position:absolute;background:#1e293b;border:1px solid #38bdf8;border-radius:8px;padding:10px 14px;font-size:0.78rem;color:#e2e8f0;pointer-events:none;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,0.4);"></div>
+    <div id="chart_legend" style="display:flex;gap:16px;margin-top:10px;flex-wrap:wrap;"></div>
+  </div>
+
+  <!-- SCENARIOS -->
+  <div class="card gap-card">
+    <h2>🎯 What-If: Path to <span id="goal_label">$100K</span>/mo</h2>
+    <p style="font-size:0.78rem;color:#64748b;margin-bottom:10px;">Each row shows ONE change needed to hit your goal, holding everything else constant. Unrealistic changes are flagged.</p>
+    <table class="scenario-table" id="scenarios"></table>
+  </div>
+
+  <!-- GOAL BAR -->
+  <div class="card gap-card">
+    <h2>🏁 Revenue Goal Progress</h2>
+    <div class="goal-bar-wrap">
+      <div class="goal-bar-bg"><div class="goal-bar-fill" id="goal_bar"></div></div>
+      <div class="goal-labels"><span id="goal_curr">$0</span><span id="goal_target">$100K</span></div>
+    </div>
+    <p style="margin-top:10px;font-size:0.85rem;color:#94a3b8;" id="goal_gap"></p>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const fmt = n => '$' + Math.round(n).toLocaleString();
+const pct = n => n.toFixed(1) + '%';
+
+function calc() {
+  // Channel inputs
+  const channels = [
+    { name: 'Facebook', leads: +$('fb_leads').value, conv: +$('fb_conv').value / 100 },
+    { name: 'Quote Form', leads: +$('qf_leads').value, conv: +$('qf_conv').value / 100 },
+    { name: 'LSA', leads: +$('lsa_leads').value, conv: +$('lsa_conv').value / 100 },
+    { name: 'LSA Msg', leads: +$('lsam_leads').value, conv: +$('lsam_conv').value / 100 },
+    { name: 'Thumbtack', leads: +$('tt_leads').value, conv: +$('tt_conv').value / 100 },
+    { name: 'Misc', leads: +$('misc_leads').value, conv: +$('misc_conv').value / 100 },
+  ];
+
+  const avgOnetime = +$('avg_onetime').value;
+  const avgRecurring = +$('avg_recurring').value;
+  const recurPct = +$('recur_pct').value / 100;
+  const visitsMo = +$('visits_mo').value;
+  const margin = +$('margin').value / 100;
+  const churn = +$('churn').value / 100;
+  const baseClients = +$('base_clients').value;
+  const baseRev = +$('base_rev').value;
+  const goal = +$('goal').value;
+
+  // Calculations
+  const totalLeads = channels.reduce((s, c) => s + c.leads, 0);
+  const totalBookings = channels.reduce((s, c) => s + c.leads * c.conv, 0);
+  const blendedConv = totalLeads > 0 ? totalBookings / totalLeads : 0;
+
+  // New bookings split
+  const newOnetime = totalBookings * (1 - recurPct);
+  const newRecurring = totalBookings * recurPct;
+
+  // Revenue from new bookings this month (first visit)
+  const newOnetimeRev = newOnetime * avgOnetime;
+  const newRecurringFirstVisit = newRecurring * avgRecurring; // Their first clean this month
+
+  // Existing recurring base revenue
+  const recurringBaseRev = baseRev; // Already calculated from real data
+
+  // Churn loss from base
+  const churnLoss = recurringBaseRev * churn;
+
+  // Total recurring this month (base - churn + new recurring first visits)
+  const totalRecurringRev = recurringBaseRev - churnLoss + newRecurringFirstVisit;
+
+  // Total revenue
+  const totalRev = newOnetimeRev + totalRecurringRev;
+  const grossProfit = totalRev * margin;
+
+  // Net new recurring clients (for growth trajectory)
+  const clientsLostToChurn = Math.round(baseClients * churn);
+  const netNewClients = Math.round(newRecurring) - clientsLostToChurn;
+
+  // Results
+  let html = '';
+  const section = (label) => `<div style="font-size:0.72rem;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;padding:10px 0 4px;">` + label + `</div>`;
+
+  html += section('Lead Pipeline');
+  html += row('Total Leads', totalLeads.toFixed(0));
+  html += row('Blended Conv Rate', pct(blendedConv * 100));
+  html += row('New Bookings', totalBookings.toFixed(0));
+
+  html += section('New Booking Revenue');
+  html += row('One-time cleans', `${newOnetime.toFixed(0)} × ${fmt(avgOnetime)} = ${fmt(newOnetimeRev)}`);
+  html += row('New recurring (1st visit)', `${newRecurring.toFixed(0)} × ${fmt(avgRecurring)} = ${fmt(newRecurringFirstVisit)}`);
+
+  html += section('Recurring Base');
+  html += row('Existing recurring rev', fmt(recurringBaseRev));
+  html += row('Churn loss (' + pct(churn*100) + ')', '<span class="red">−' + fmt(churnLoss).slice(1) + '</span>');
+  html += row('Net recurring rev', fmt(totalRecurringRev));
+
+  html += section('Client Growth');
+  html += row('Current recurring clients', baseClients.toString());
+  html += row('New recurring adds', '+' + newRecurring.toFixed(0));
+  html += row('Lost to churn', '<span class="red">−' + clientsLostToChurn + '</span>');
+  html += row('Net change/mo', netNewClients >= 0 ?
+    `<span class="green">+${netNewClients}</span>` :
+    `<span class="red">${netNewClients}</span>`);
+
+  html += `<div class="result-row highlight"><span>Total Monthly Revenue</span><span>${fmt(totalRev)}</span></div>`;
+  html += `<div class="result-row highlight"><span>Gross Profit (${pct(margin*100)})</span><span>${fmt(grossProfit)}</span></div>`;
+
+  $('results').innerHTML = html;
+
+  // Bar chart
+  const maxRev = Math.max(totalRev, goal);
+  const barScale = (v) => Math.max(2, (v / maxRev) * 100);
+  let bhtml = '';
+  bhtml += bar('Recurring Base', recurringBaseRev - churnLoss, '#38bdf8', maxRev);
+  bhtml += bar('New Recurring', newRecurringFirstVisit, '#22d3ee', maxRev);
+  bhtml += bar('One-Time', newOnetimeRev, '#4ade80', maxRev);
+  bhtml += `<div style="margin-top:8px;border-top:1px solid #334155;padding-top:6px;">`;
+  bhtml += bar('TOTAL', totalRev, totalRev >= goal ? '#4ade80' : '#fbbf24', maxRev);
+  bhtml += bar('GOAL', goal, '#64748b', maxRev);
+  bhtml += `</div>`;
+  $('bar_chart').innerHTML = bhtml;
+
+  // Funnel
+  let fhtml = '';
+  channels.forEach(c => {
+    const booked = c.leads * c.conv;
+    const w = Math.max(15, (c.leads / Math.max(totalLeads, 1)) * 100);
+    fhtml += `<div style="display:flex;align-items:center;margin-bottom:4px;">
+      <span style="width:80px;font-size:0.75rem;color:#94a3b8;text-align:right;padding-right:8px;">${c.name}</span>
+      <div style="flex:1;display:flex;align-items:center;gap:6px;">
+        <div style="background:#334155;border-radius:4px;height:20px;flex:1;position:relative;">
+          <div style="background:#38bdf8;height:100%;border-radius:4px;width:${(c.leads/Math.max(...channels.map(x=>x.leads),1))*100}%;opacity:0.5;"></div>
+        </div>
+        <span style="font-size:0.72rem;color:#cbd5e1;min-width:100px;">${c.leads}→${booked.toFixed(0)} (${pct(c.conv*100)})</span>
+      </div>
+    </div>`;
+  });
+  $('funnel').innerHTML = fhtml;
+
+  // Scenarios
+  const gap = goal - totalRev;
+  let shtml = '<tr><th>Lever</th><th>Current → Needed</th><th class="num">Feasible?</th></tr>';
+
+  // 1. More FB leads (same conv)
+  if (channels[0].conv > 0) {
+    const fbBookingsNeeded = gap / (avgOnetime * (1-recurPct) + avgRecurring * recurPct);
+    const extraFBLeads = Math.ceil(fbBookingsNeeded / channels[0].conv);
+    const newFB = channels[0].leads + extraFBLeads;
+    const feasible = extraFBLeads < channels[0].leads * 0.5 ? '✅ Doable' : extraFBLeads < channels[0].leads ? '⚠️ Stretch' : '🔴 Hard';
+    shtml += `<tr><td>More FB Leads</td><td>${channels[0].leads} → ${newFB}/mo (+${extraFBLeads})</td><td class="num">${feasible}</td></tr>`;
+  }
+
+  // 2. Higher FB conv
+  const extraBookingsNeeded = gap / (avgOnetime * (1-recurPct) + avgRecurring * recurPct);
+  const needFBConv = channels[0].leads > 0 ? (channels[0].leads * channels[0].conv + extraBookingsNeeded) / channels[0].leads : 0;
+  const fbConvFeasible = needFBConv <= 0.20 ? '✅ Doable' : needFBConv <= 0.30 ? '⚠️ Stretch' : '🔴 Hard';
+  shtml += `<tr><td>Higher FB Conv</td><td>${pct(channels[0].conv*100)} → ${pct(needFBConv*100)}</td><td class="num">${gap<=0?'✅ Already there':fbConvFeasible}</td></tr>`;
+
+  // 3. Higher avg job value (both)
+  const currentAvgBlended = (newOnetimeRev + newRecurringFirstVisit) / Math.max(totalBookings, 1);
+  const needAvgIncrease = totalBookings > 0 ? gap / totalBookings : 0;
+  const newAvgBlended = currentAvgBlended + needAvgIncrease;
+  const avgFeasible = needAvgIncrease / currentAvgBlended <= 0.15 ? '✅ Doable' : needAvgIncrease / currentAvgBlended <= 0.30 ? '⚠️ Stretch' : '🔴 Hard';
+  shtml += `<tr><td>Higher Avg Job</td><td>${fmt(currentAvgBlended)} → ${fmt(newAvgBlended)} (+${pct(needAvgIncrease/Math.max(currentAvgBlended,1)*100)})</td><td class="num">${gap<=0?'✅ Already there':avgFeasible}</td></tr>`;
+
+  // 4. Grow recurring base
+  const needExtraRecRev = gap;
+  const needExtraClients = Math.ceil(needExtraRecRev / (avgRecurring * visitsMo));
+  const recFeasible = needExtraClients <= 50 ? '✅ Doable' : needExtraClients <= 100 ? '⚠️ Stretch' : '🔴 Hard';
+  shtml += `<tr><td>Grow Recurring Base</td><td>+${needExtraClients} clients (${fmt(needExtraRecRev)}/mo more)</td><td class="num">${gap<=0?'✅ Already there':recFeasible}</td></tr>`;
+
+  // 5. Reduce churn
+  const needChurn = recurringBaseRev > 0 ? Math.max(0, churn - gap / recurringBaseRev) : 0;
+  const churnFeasible = needChurn >= 0 && gap <= churnLoss ? '✅ Doable' : '🔴 Not enough';
+  shtml += `<tr><td>Reduce Churn</td><td>${pct(churn*100)} → ${pct(needChurn*100)}</td><td class="num">${gap<=0?'✅ Already there':churnFeasible}</td></tr>`;
+
+  // 6. Combined: +20% leads + +3pt conv + 10% price increase
+  const combo_leads = totalLeads * 1.2;
+  const combo_bookings = channels.reduce((s, c) => s + (c.leads * 1.2) * Math.min(c.conv + 0.03, 1), 0);
+  const combo_onetime_rev = combo_bookings * (1-recurPct) * avgOnetime * 1.1;
+  const combo_rec_first = combo_bookings * recurPct * avgRecurring * 1.1;
+  const combo_total = (recurringBaseRev - churnLoss) + combo_onetime_rev + combo_rec_first;
+  shtml += `<tr style="background:#1a2332;"><td><strong>Combined</strong></td><td>+20% leads, +3pt conv, +10% price</td><td class="num"><strong>${fmt(combo_total)}</strong></td></tr>`;
+
+  $('scenarios').innerHTML = shtml;
+  $('goal_label').textContent = fmt(goal);
+
+  // Goal bar
+  const pctGoal = Math.min(totalRev / goal, 1.2);
+  const goalBar = $('goal_bar');
+  goalBar.style.width = Math.min(pctGoal * 100, 100) + '%';
+  goalBar.style.background = pctGoal >= 1 ? '#4ade80' : pctGoal > 0.8 ? '#fbbf24' : '#f87171';
+  goalBar.textContent = pct(Math.min(pctGoal, 1) * 100);
+  $('goal_curr').textContent = fmt(totalRev);
+  $('goal_target').textContent = fmt(goal);
+
+  if (totalRev >= goal) {
+    $('goal_gap').innerHTML = `<span class="green">🎉 Above goal by ${fmt(totalRev - goal)}!</span>`;
+  } else {
+    const gapPct = (gap / goal * 100).toFixed(0);
+    $('goal_gap').innerHTML = `Gap: <strong>${fmt(gap)}</strong> (${gapPct}% away). At current net client growth of <strong>${netNewClients >= 0 ? '+' : ''}${netNewClients}/mo</strong>, recurring alone closes ~${fmt(netNewClients * avgRecurring * visitsMo)}/mo of that gap each month.`;
+  }
+}
+
+function row(label, value) {
+  return `<div class="result-row"><span class="result-label">${label}</span><span class="result-value">${value}</span></div>`;
+}
+
+function bar(label, value, color, max) {
+  const w = Math.max(2, (value / max) * 100);
+  return `<div style="display:flex;align-items:center;margin-bottom:4px;">
+    <span style="width:100px;font-size:0.72rem;color:#94a3b8;text-align:right;padding-right:8px;">${label}</span>
+    <div style="flex:1;position:relative;">
+      <div style="background:${color};height:18px;border-radius:4px;width:${w}%;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;">
+        <span style="font-size:0.7rem;font-weight:600;color:#0f172a;">${fmt(value)}</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+// === 12-MONTH PROJECTION CHART ===
+const canvas = $('projection_chart');
+const ctx = canvas.getContext('2d');
+const tooltip = $('chart_tooltip');
+let projectionData = [];
+
+function drawChart() {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = rect.height;
+
+  const growthRate = +$('growth_slider').value / 100;
+  $('growth_label').textContent = (growthRate >= 0 ? '+' : '') + (growthRate * 100).toFixed(0) + '%';
+
+  // Get current inputs
+  const channels = [
+    { leads: +$('fb_leads').value, conv: +$('fb_conv').value / 100 },
+    { leads: +$('qf_leads').value, conv: +$('qf_conv').value / 100 },
+    { leads: +$('lsa_leads').value, conv: +$('lsa_conv').value / 100 },
+    { leads: +$('lsam_leads').value, conv: +$('lsam_conv').value / 100 },
+    { leads: +$('tt_leads').value, conv: +$('tt_conv').value / 100 },
+    { leads: +$('misc_leads').value, conv: +$('misc_conv').value / 100 },
+  ];
+  const avgOnetime = +$('avg_onetime').value;
+  const avgRecurring = +$('avg_recurring').value;
+  const recurPct = +$('recur_pct').value / 100;
+  const visitsMo = +$('visits_mo').value;
+  const marginPct = +$('margin').value / 100;
+  const churn = +$('churn').value / 100;
+  const goal = +$('goal').value;
+  let recurClients = +$('base_clients').value;
+  let recurRev = +$('base_rev').value;
+
+  // Simulate 12 months
+  projectionData = [];
+  const months = ['Now','M1','M2','M3','M4','M5','M6','M7','M8','M9','M10','M11','M12'];
+
+  for (let i = 0; i <= 12; i++) {
+    const leadMult = Math.pow(1 + growthRate, i);
+    const totalBookings = channels.reduce((s, c) => s + (c.leads * leadMult) * c.conv, 0);
+    const newOnetime = totalBookings * (1 - recurPct);
+    const newRecurring = totalBookings * recurPct;
+    const onetimeRev = newOnetime * avgOnetime;
+    const newRecFirstVisit = newRecurring * avgRecurring;
+    const churnLoss = recurRev * churn;
+    const totalRecRev = recurRev - churnLoss + newRecFirstVisit;
+    const totalRev = onetimeRev + totalRecRev;
+    const gp = totalRev * marginPct;
+
+    projectionData.push({
+      month: months[i],
+      total: totalRev,
+      recurring: totalRecRev,
+      onetime: onetimeRev,
+      gp: gp,
+      clients: recurClients,
+    });
+
+    // Update recurring base for next month
+    const clientsLost = Math.round(recurClients * churn);
+    recurClients = recurClients - clientsLost + Math.round(newRecurring);
+    recurRev = totalRecRev; // Next month's base = this month's recurring output
+  }
+
+  // Reset recurring state for re-render
+  // (will be recalced on next call)
+
+  // Chart dimensions
+  const padL = 60, padR = 20, padT = 30, padB = 40;
+  const chartW = W - padL - padR;
+  const chartH = H - padT - padB;
+
+  const maxVal = Math.max(goal * 1.15, ...projectionData.map(d => d.total)) || 100000;
+  const xStep = chartW / 12;
+  const yScale = chartH / maxVal;
+
+  // Clear
+  ctx.clearRect(0, 0, W, H);
+
+  // Grid lines
+  ctx.strokeStyle = '#1e293b';
+  ctx.lineWidth = 1;
+  const gridSteps = 5;
+  for (let i = 0; i <= gridSteps; i++) {
+    const y = padT + (chartH / gridSteps) * i;
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
+    const val = maxVal - (maxVal / gridSteps) * i;
+    ctx.fillStyle = '#64748b';
+    ctx.font = '11px -apple-system, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText('$' + Math.round(val / 1000) + 'K', padL - 8, y + 4);
+  }
+
+  // Goal line
+  const goalY = padT + chartH - (goal * yScale);
+  ctx.strokeStyle = '#f87171';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([8, 4]);
+  ctx.beginPath(); ctx.moveTo(padL, goalY); ctx.lineTo(W - padR, goalY); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#f87171';
+  ctx.font = 'bold 11px -apple-system, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('Goal: $' + Math.round(goal/1000) + 'K', padL + 4, goalY - 6);
+
+  // Stacked area: recurring + onetime
+  // Recurring area
+  ctx.beginPath();
+  ctx.moveTo(padL, padT + chartH);
+  projectionData.forEach((d, i) => {
+    ctx.lineTo(padL + i * xStep, padT + chartH - d.recurring * yScale);
+  });
+  ctx.lineTo(padL + 12 * xStep, padT + chartH);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(56, 189, 248, 0.3)';
+  ctx.fill();
+
+  // Total area (on top of recurring)
+  ctx.beginPath();
+  ctx.moveTo(padL, padT + chartH);
+  projectionData.forEach((d, i) => {
+    ctx.lineTo(padL + i * xStep, padT + chartH - d.recurring * yScale);
+  });
+  for (let i = projectionData.length - 1; i >= 0; i--) {
+    ctx.lineTo(padL + i * xStep, padT + chartH - projectionData[i].total * yScale);
+  }
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(74, 222, 128, 0.25)';
+  ctx.fill();
+
+  // Lines
+  // Total revenue line
+  ctx.strokeStyle = '#4ade80';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  projectionData.forEach((d, i) => {
+    const x = padL + i * xStep, y = padT + chartH - d.total * yScale;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Recurring line
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  projectionData.forEach((d, i) => {
+    const x = padL + i * xStep, y = padT + chartH - d.recurring * yScale;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Gross profit line
+  ctx.strokeStyle = '#a78bfa';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  projectionData.forEach((d, i) => {
+    const x = padL + i * xStep, y = padT + chartH - d.gp * yScale;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Data points on total line
+  projectionData.forEach((d, i) => {
+    const x = padL + i * xStep, y = padT + chartH - d.total * yScale;
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = d.total >= goal ? '#4ade80' : '#fbbf24';
+    ctx.fill();
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  });
+
+  // X labels
+  ctx.fillStyle = '#64748b';
+  ctx.font = '11px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  projectionData.forEach((d, i) => {
+    ctx.fillText(d.month, padL + i * xStep, H - padB + 16);
+  });
+
+  // Legend
+  $('chart_legend').innerHTML = [
+    ['#4ade80', 'Total Revenue'],
+    ['#38bdf8', 'Recurring Revenue'],
+    ['#a78bfa', 'Gross Profit'],
+    ['#f87171', 'Goal'],
+  ].map(([c, l]) => `<span style="display:flex;align-items:center;gap:4px;font-size:0.75rem;color:#94a3b8;"><span style="width:12px;height:3px;background:${c};border-radius:2px;"></span>${l}</span>`).join('');
+
+  // Find month where goal is hit
+  const hitMonth = projectionData.findIndex(d => d.total >= goal);
+  if (hitMonth > 0) {
+    const x = padL + hitMonth * xStep;
+    const y = padT + chartH - projectionData[hitMonth].total * yScale;
+    ctx.fillStyle = '#4ade80';
+    ctx.font = 'bold 12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('🎯 $100K!', x, y - 14);
+  }
+}
+
+// Tooltip on hover
+canvas.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const padL = 60, padR = 20;
+  const chartW = rect.width - padL - padR;
+  const xStep = chartW / 12;
+  const mouseX = e.clientX - rect.left;
+  const idx = Math.round((mouseX - padL) / xStep);
+
+  if (idx >= 0 && idx < projectionData.length) {
+    const d = projectionData[idx];
+    tooltip.style.display = 'block';
+    tooltip.style.left = (e.pageX + 12) + 'px';
+    tooltip.style.top = (e.pageY - 60) + 'px';
+    tooltip.innerHTML = `<strong>${d.month}</strong><br>
+      Total: <span style="color:#4ade80">${fmt(d.total)}</span><br>
+      Recurring: <span style="color:#38bdf8">${fmt(d.recurring)}</span><br>
+      One-Time: <span style="color:#4ade80">${fmt(d.onetime)}</span><br>
+      GP: <span style="color:#a78bfa">${fmt(d.gp)}</span><br>
+      Clients: ${d.clients}`;
+  } else {
+    tooltip.style.display = 'none';
+  }
+});
+
+canvas.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+
+// Touch support for mobile
+canvas.addEventListener('touchstart', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const padL = 60, padR = 20;
+  const chartW = rect.width - padL - padR;
+  const xStep = chartW / 12;
+  const touch = e.touches[0];
+  const mouseX = touch.clientX - rect.left;
+  const idx = Math.round((mouseX - padL) / xStep);
+
+  if (idx >= 0 && idx < projectionData.length) {
+    const d = projectionData[idx];
+    tooltip.style.display = 'block';
+    tooltip.style.left = (touch.pageX + 12) + 'px';
+    tooltip.style.top = (touch.pageY - 80) + 'px';
+    tooltip.innerHTML = `<strong>${d.month}</strong><br>
+      Total: <span style="color:#4ade80">${fmt(d.total)}</span><br>
+      Recurring: <span style="color:#38bdf8">${fmt(d.recurring)}</span><br>
+      GP: <span style="color:#a78bfa">${fmt(d.gp)}</span><br>
+      Clients: ${d.clients}`;
+  }
+});
+canvas.addEventListener('touchend', () => { setTimeout(() => tooltip.style.display = 'none', 2000); });
+
+$('growth_slider').addEventListener('input', () => { drawChart(); });
+
+function calcAll() { calc(); drawChart(); }
+document.querySelectorAll('input').forEach(el => el.addEventListener('input', calcAll));
+calcAll();
+window.addEventListener('resize', drawChart);
+</script>
+</body>
+</html>
