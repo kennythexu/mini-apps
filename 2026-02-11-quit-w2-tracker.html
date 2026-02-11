@@ -20,7 +20,6 @@
   .row .val { font-weight: 600; text-align: right; min-width: 100px; }
   .row input { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; width: 130px; text-align: right; font-size: 0.95rem; }
   .row input:focus { outline: none; border-color: var(--accent); }
-  .row select { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; }
   .progress-wrap { margin-top: 16px; }
   .progress-bar { height: 20px; background: var(--bg); border-radius: 10px; overflow: hidden; }
   .progress-fill { height: 100%; border-radius: 10px; transition: width 0.5s; }
@@ -30,12 +29,10 @@
   .stat .lbl { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
   .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .full { grid-column: 1 / -1; }
-  .section-label { font-size: 0.75rem; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; padding: 12px 0 4px; font-weight: 600; }
   .pnl-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; }
   .pnl-row.total { border-top: 2px solid var(--border); margin-top: 4px; padding-top: 10px; }
   .pnl-row .pnl-label { font-size: 0.85rem; color: var(--muted); }
   .pnl-row .pnl-val { font-weight: 600; font-size: 0.95rem; }
-  .pnl-row .pnl-pct { font-size: 0.75rem; color: var(--muted); margin-left: 8px; min-width: 45px; text-align: right; }
   .pnl-row.total .pnl-label { color: var(--text); font-weight: 700; }
   .pnl-row.total .pnl-val { font-size: 1.1rem; }
   .neg { color: var(--red); }
@@ -81,46 +78,21 @@
     <div class="row"><label>Lunouri Monthly Profit</label><input type="number" id="lunouri" value="1500"></div>
     <div class="row"><label>Other Income (monthly)</label><input type="number" id="other" value="0"></div>
     <div class="divider"></div>
-    <div class="section-label">Cost & Expense Assumptions</div>
     <div class="slider-row">
-      <label><span>Contractor Pay %</span><span id="cp-pct-label">47.0%</span></label>
-      <input type="range" id="cp-pct" min="35" max="55" step="0.5" value="47">
+      <label><span>Rover Net Margin %</span><span id="margin-label">15.0%</span></label>
+      <input type="range" id="net-margin" min="5" max="40" step="0.5" value="15">
     </div>
-    <div class="slider-row">
-      <label><span>Drive Time Pay %</span><span id="dt-pct-label">4.8%</span></label>
-      <input type="range" id="dt-pct" min="0" max="10" step="0.1" value="4.8">
-    </div>
-    <div class="slider-row">
-      <label><span>Monthly OpEx (excl. Stripe/Tax)</span><span id="opex-label">$2,180</span></label>
-      <input type="range" id="opex" min="1000" max="8000" step="100" value="2180">
-    </div>
-    <p class="note">Defaults from your actual Feb 2026 P&L. Adjust to model scenarios.</p>
+    <p class="note">Net margin = what you actually keep after all costs, expenses, and sales tax. Default 15% is a conservative planning assumption.</p>
   </div>
 
-  <!-- Rover P&L -->
+  <!-- Rover Quick P&L -->
   <div class="card">
-    <h2>📋 Rover Monthly P&L</h2>
-    <div class="section-label">Revenue</div>
-    <div class="pnl-row"><span class="pnl-label">Gross Revenue</span><span class="pnl-val" id="pnl-rev">$0</span></div>
-
-    <div class="section-label">Cost of Revenue</div>
-    <div class="pnl-row"><span class="pnl-label">Contractor Pay</span><span class="pnl-val neg" id="pnl-cp">$0</span><span class="pnl-pct" id="pnl-cp-pct"></span></div>
-    <div class="pnl-row"><span class="pnl-label">Drive Time Pay</span><span class="pnl-val neg" id="pnl-dt">$0</span><span class="pnl-pct" id="pnl-dt-pct"></span></div>
-    <div class="pnl-row total"><span class="pnl-label">Gross Profit</span><span class="pnl-val pos" id="pnl-gp">$0</span><span class="pnl-pct" id="pnl-gp-pct"></span></div>
-
-    <div class="section-label">Operating Expenses</div>
-    <div class="pnl-row"><span class="pnl-label">Advertising</span><span class="pnl-val" id="pnl-ads">$0</span></div>
-    <div class="pnl-row"><span class="pnl-label">VA Payroll</span><span class="pnl-val" id="pnl-va">$0</span></div>
-    <div class="pnl-row"><span class="pnl-label">Website & Software</span><span class="pnl-val" id="pnl-sw">$0</span></div>
-    <div class="pnl-row"><span class="pnl-label">Stripe Fees (3.19%)</span><span class="pnl-val" id="pnl-stripe">$0</span></div>
-    <div class="pnl-row"><span class="pnl-label">Other OpEx</span><span class="pnl-val" id="pnl-other-opex">$0</span></div>
-    <div class="pnl-row total"><span class="pnl-label">Total Expenses</span><span class="pnl-val neg" id="pnl-totex">$0</span><span class="pnl-pct" id="pnl-totex-pct"></span></div>
-
-    <div class="section-label">Bottom Line</div>
-    <div class="pnl-row"><span class="pnl-label">Earnings Before Taxes</span><span class="pnl-val" id="pnl-ebt">$0</span><span class="pnl-pct" id="pnl-ebt-pct"></span></div>
-    <div class="pnl-row"><span class="pnl-label">Sales Tax Est. (8.25%)</span><span class="pnl-val neg" id="pnl-tax">$0</span><span class="pnl-pct" id="pnl-tax-pct"></span></div>
-    <div class="pnl-row total" style="border-top-color:var(--green)"><span class="pnl-label">🏦 Net Earnings (Owner Draw Capacity)</span><span class="pnl-val pos" id="pnl-net">$0</span><span class="pnl-pct" id="pnl-net-pct"></span></div>
-    <p class="note">Replicates your P&L Updated sheet logic. Sales tax = Rev ÷ 1.0825 × 0.0825.</p>
+    <h2>📋 Rover Monthly Snapshot</h2>
+    <div class="pnl-row"><span class="pnl-label">Revenue</span><span class="pnl-val" id="pnl-rev">$0</span></div>
+    <div class="pnl-row"><span class="pnl-label">All-in Costs & Expenses</span><span class="pnl-val neg" id="pnl-costs">$0</span></div>
+    <div class="pnl-row total"><span class="pnl-label">🏦 Net Earnings (Owner Draw)</span><span class="pnl-val pos" id="pnl-net">$0</span></div>
+    <div class="pnl-row"><span class="pnl-label">Net Earnings / year</span><span class="pnl-val" id="pnl-net-yr">$0</span></div>
+    <p class="note">Net = Revenue × net margin %. Adjust the slider to model different margin scenarios.</p>
   </div>
 
   <!-- Progress to $500K -->
@@ -138,16 +110,16 @@
       <div class="stat"><div class="sval" id="months-left">0</div><div class="lbl">Months to Apr '28</div></div>
     </div>
     <div class="stats-row" style="margin-top:8px">
-      <div class="stat"><div class="sval pos" id="rover-net-annual">$0</div><div class="lbl">Rover (Net/yr)</div></div>
-      <div class="stat"><div class="sval" id="snap-annual">$0</div><div class="lbl">Snap (yr)</div></div>
-      <div class="stat"><div class="sval" id="other-annual">$0</div><div class="lbl">Other (yr)</div></div>
+      <div class="stat"><div class="sval pos" id="rover-net-annual">$0</div><div class="lbl">Rover Net/yr</div></div>
+      <div class="stat"><div class="sval" id="snap-annual">$0</div><div class="lbl">Snap/yr</div></div>
+      <div class="stat"><div class="sval" id="other-annual">$0</div><div class="lbl">Lunouri+Other/yr</div></div>
     </div>
   </div>
 
-  <!-- Rover Revenue Scenarios -->
+  <!-- Revenue Scenarios -->
   <div class="card">
     <h2>🚀 Revenue Scenario Comparison</h2>
-    <p style="font-size:0.8rem;color:var(--muted);margin-bottom:12px">See how Rover revenue milestones change your bottom line and quit readiness.</p>
+    <p style="font-size:0.8rem;color:var(--muted);margin-bottom:12px">How Rover revenue milestones change your total income at your current net margin.</p>
     <div class="scenario-tabs">
       <button class="active" onclick="setScenario(this,0)">Current</button>
       <button onclick="setScenario(this,1)">$100K</button>
@@ -155,14 +127,10 @@
       <button onclick="setScenario(this,3)">$150K</button>
       <button onclick="setScenario(this,4)">$200K</button>
     </div>
-    <div class="pnl-row"><span class="pnl-label">Revenue</span><span class="pnl-val" id="sc-rev">$0</span></div>
-    <div class="pnl-row"><span class="pnl-label">Contractor Costs</span><span class="pnl-val neg" id="sc-cc">$0</span></div>
-    <div class="pnl-row"><span class="pnl-label">Gross Profit</span><span class="pnl-val pos" id="sc-gp">$0</span></div>
-    <div class="pnl-row"><span class="pnl-label">Total Expenses + Stripe</span><span class="pnl-val neg" id="sc-exp">$0</span></div>
-    <div class="pnl-row"><span class="pnl-label">Sales Tax</span><span class="pnl-val neg" id="sc-tax">$0</span></div>
-    <div class="pnl-row total"><span class="pnl-label">Net Earnings / mo</span><span class="pnl-val pos" id="sc-net">$0</span></div>
+    <div class="pnl-row"><span class="pnl-label">Rover Revenue</span><span class="pnl-val" id="sc-rev">$0</span></div>
+    <div class="pnl-row"><span class="pnl-label">Net Earnings / mo</span><span class="pnl-val pos" id="sc-net">$0</span></div>
     <div class="pnl-row"><span class="pnl-label">Net Earnings / yr</span><span class="pnl-val" id="sc-net-yr">$0</span></div>
-    <div class="pnl-row"><span class="pnl-label">Total Annual (all streams)</span><span class="pnl-val" style="font-weight:700" id="sc-total">$0</span></div>
+    <div class="pnl-row total"><span class="pnl-label">Total Annual (all streams)</span><span class="pnl-val" id="sc-total">$0</span></div>
     <div style="margin-top:8px"><span class="tag" id="sc-tag">—</span></div>
   </div>
 
@@ -179,57 +147,22 @@
     <div class="timeline" id="timeline"></div>
   </div>
 
-  <!-- What Moves the Needle -->
+  <!-- Levers -->
   <div class="card full">
     <h2>🎯 Biggest Levers (ranked by annual income impact)</h2>
     <div id="levers"></div>
-    <p class="note">Shows how much each move adds to your annual take-home based on your actual P&L structure.</p>
+    <p class="note">Shows how much each move adds to your annual take-home.</p>
   </div>
 </div>
 
 <script>
 const $ = id => document.getElementById(id);
-const fmt = n => { const sign = n < 0 ? '-' : ''; return sign + '$' + Math.abs(Math.round(n)).toLocaleString(); };
-const pct = (n, d) => d ? (n/d*100).toFixed(1) + '%' : '—';
+const fmt = n => { const s = n < 0 ? '-' : ''; return s + '$' + Math.abs(Math.round(n)).toLocaleString(); };
 const TARGET = 500000;
 
-// ========== P&L ENGINE (mirrors P&L Updated sheet) ==========
-function calcRoverPnL(rev, cpPct, dtPct, monthlyOpex) {
-  const cp = rev * (cpPct / 100);
-  const dt = rev * (dtPct / 100);
-  const gp = rev - cp - dt;
-
-  // OpEx breakdown (proportions from actual Feb 2026 data)
-  // Total opex excl stripe = $2,179.49 → ads 1011.70, VA 783.15, software 401.97, prof svc 180.25, rent 18.45, insurance 78.33, hiring -294.36
-  // We scale linearly from the base
-  const opexBase = 2180;
-  const scale = monthlyOpex / opexBase;
-  const ads = 1012 * scale;
-  const va = 783 * scale;
-  const sw = 402 * scale;
-  const otherOpex = (monthlyOpex - ads - va - sw);
-
-  const stripeFees = rev * 0.0319;
-  const totalExp = monthlyOpex + stripeFees;
-
-  const ebt = gp - totalExp;
-  const salesTax = rev / 1.0825 * 0.0825;
-  const net = ebt - salesTax;
-
-  return { rev, cp, dt, gp, ads, va, sw, otherOpex, stripeFees, totalExp, ebt, salesTax, net, monthlyOpex };
-}
-
-// ========== STATE ==========
-const inputIds = ['snap', 'rover-rev', 'lunouri', 'other'];
-const sliderIds = ['cp-pct', 'dt-pct', 'opex'];
+const inputIds = ['snap', 'rover-rev', 'lunouri', 'other', 'net-margin'];
 let currentScenario = 0;
-const scenarios = [
-  { rev: null, label: 'Current' },
-  { rev: 100000 },
-  { rev: 120000 },
-  { rev: 150000 },
-  { rev: 200000 },
-];
+const scenarios = [null, 100000, 120000, 150000, 200000];
 
 function setScenario(btn, idx) {
   document.querySelectorAll('.scenario-tabs button').forEach(b => b.classList.remove('active'));
@@ -244,60 +177,38 @@ function getVals() {
     roverRev: parseFloat($('rover-rev').value) || 0,
     lunouri: parseFloat($('lunouri').value) || 0,
     other: parseFloat($('other').value) || 0,
-    cpPct: parseFloat($('cp-pct').value) || 47,
-    dtPct: parseFloat($('dt-pct').value) || 4.8,
-    opex: parseFloat($('opex').value) || 2180,
+    netMargin: (parseFloat($('net-margin').value) || 15) / 100,
   };
 }
+
+function roverNet(rev, margin) { return rev * margin; }
 
 function update() {
   const v = getVals();
 
-  // Update slider labels
-  $('cp-pct-label').textContent = v.cpPct.toFixed(1) + '%';
-  $('dt-pct-label').textContent = v.dtPct.toFixed(1) + '%';
-  $('opex-label').textContent = fmt(v.opex);
+  // Slider label
+  $('margin-label').textContent = (v.netMargin * 100).toFixed(1) + '%';
 
-  // ===== Rover P&L =====
-  const pnl = calcRoverPnL(v.roverRev, v.cpPct, v.dtPct, v.opex);
+  // Rover P&L
+  const net = roverNet(v.roverRev, v.netMargin);
+  const costs = v.roverRev - net;
+  $('pnl-rev').textContent = fmt(v.roverRev);
+  $('pnl-costs').textContent = '-' + fmt(costs);
+  $('pnl-net').textContent = fmt(net);
+  $('pnl-net').className = 'pnl-val ' + (net >= 0 ? 'pos' : 'neg');
+  $('pnl-net-yr').textContent = fmt(net * 12);
 
-  $('pnl-rev').textContent = fmt(pnl.rev);
-  $('pnl-cp').textContent = '-' + fmt(pnl.cp);
-  $('pnl-cp-pct').textContent = pct(pnl.cp, pnl.rev);
-  $('pnl-dt').textContent = '-' + fmt(pnl.dt);
-  $('pnl-dt-pct').textContent = pct(pnl.dt, pnl.rev);
-  $('pnl-gp').textContent = fmt(pnl.gp);
-  $('pnl-gp-pct').textContent = pct(pnl.gp, pnl.rev);
-
-  $('pnl-ads').textContent = fmt(pnl.ads);
-  $('pnl-va').textContent = fmt(pnl.va);
-  $('pnl-sw').textContent = fmt(pnl.sw);
-  $('pnl-stripe').textContent = fmt(pnl.stripeFees);
-  $('pnl-other-opex').textContent = fmt(pnl.otherOpex);
-  $('pnl-totex').textContent = '-' + fmt(pnl.totalExp);
-  $('pnl-totex-pct').textContent = pct(pnl.totalExp, pnl.rev);
-
-  $('pnl-ebt').textContent = fmt(pnl.ebt);
-  $('pnl-ebt-pct').textContent = pct(pnl.ebt, pnl.rev);
-  $('pnl-tax').textContent = '-' + fmt(pnl.salesTax);
-  $('pnl-tax-pct').textContent = pct(pnl.salesTax, pnl.rev);
-  $('pnl-net').textContent = fmt(pnl.net);
-  $('pnl-net').className = 'pnl-val ' + (pnl.net >= 0 ? 'pos' : 'neg');
-  $('pnl-net-pct').textContent = pct(pnl.net, pnl.rev);
-
-  // ===== Annual Income =====
-  const roverNetMonthly = pnl.net;
-  const monthlyIncome = v.snap + roverNetMonthly + v.lunouri + v.other;
+  // Annual
+  const monthlyIncome = v.snap + net + v.lunouri + v.other;
   const annual = monthlyIncome * 12;
-  const progress = Math.min(100, (annual / TARGET) * 100);
+  const pct = Math.min(100, (annual / TARGET) * 100);
   const gap = Math.max(0, TARGET - annual);
 
   $('annual-income').textContent = fmt(annual);
-  $('annual-income').className = 'big-number ' + (annual >= TARGET ? 'pos' : '');
-  $('annual-sub').textContent = `${fmt(monthlyIncome)}/mo — Snap ${fmt(v.snap)} + Rover Net ${fmt(roverNetMonthly)} + Lunouri ${fmt(v.lunouri)}` + (v.other ? ` + Other ${fmt(v.other)}` : '');
-  $('progress-fill').style.width = progress + '%';
-  $('progress-fill').style.background = progress >= 100 ? 'var(--green)' : progress >= 70 ? 'var(--yellow)' : 'var(--accent)';
-  $('pct-label').textContent = progress.toFixed(1) + '%';
+  $('annual-sub').textContent = `${fmt(monthlyIncome)}/mo — Snap ${fmt(v.snap)} + Rover ${fmt(net)} + Lunouri ${fmt(v.lunouri)}` + (v.other ? ` + Other ${fmt(v.other)}` : '');
+  $('progress-fill').style.width = pct + '%';
+  $('progress-fill').style.background = pct >= 100 ? 'var(--green)' : pct >= 70 ? 'var(--yellow)' : 'var(--accent)';
+  $('pct-label').textContent = pct.toFixed(1) + '%';
   $('gap').textContent = fmt(gap);
   $('gap').style.color = gap === 0 ? 'var(--green)' : 'var(--red)';
   $('monthly-gap').textContent = fmt(gap / 12);
@@ -307,25 +218,17 @@ function update() {
   const months = Math.max(0, (target.getFullYear() - now.getFullYear()) * 12 + (target.getMonth() - now.getMonth()));
   $('months-left').textContent = months;
 
-  $('rover-net-annual').textContent = fmt(roverNetMonthly * 12);
+  $('rover-net-annual').textContent = fmt(net * 12);
   $('snap-annual').textContent = fmt(v.snap * 12);
   $('other-annual').textContent = fmt((v.lunouri + v.other) * 12);
 
-  // ===== Scenarios =====
-  const sc = scenarios[currentScenario];
-  const scRev = sc.rev || v.roverRev;
-  // Scale opex slightly with revenue (ads scale, fixed costs don't)
-  const scOpexScale = v.opex * (0.7 + 0.3 * (scRev / v.roverRev));
-  const scPnl = calcRoverPnL(scRev, v.cpPct, v.dtPct, scRev === v.roverRev ? v.opex : scOpexScale);
-  const scAnnual = (v.snap + scPnl.net + v.lunouri + v.other) * 12;
-
+  // Scenarios
+  const scRev = scenarios[currentScenario] || v.roverRev;
+  const scNet = roverNet(scRev, v.netMargin);
+  const scAnnual = (v.snap + scNet + v.lunouri + v.other) * 12;
   $('sc-rev').textContent = fmt(scRev);
-  $('sc-cc').textContent = '-' + fmt(scPnl.cp + scPnl.dt);
-  $('sc-gp').textContent = fmt(scPnl.gp);
-  $('sc-exp').textContent = '-' + fmt(scPnl.totalExp);
-  $('sc-tax').textContent = '-' + fmt(scPnl.salesTax);
-  $('sc-net').textContent = fmt(scPnl.net);
-  $('sc-net-yr').textContent = fmt(scPnl.net * 12);
+  $('sc-net').textContent = fmt(scNet);
+  $('sc-net-yr').textContent = fmt(scNet * 12);
   $('sc-total').textContent = fmt(scAnnual);
 
   const scTag = $('sc-tag');
@@ -333,12 +236,11 @@ function update() {
   else if (scAnnual >= TARGET * 0.8) { scTag.textContent = '⚠️ CLOSE — ' + fmt(TARGET - scAnnual) + ' gap'; scTag.className = 'tag warn'; }
   else { scTag.textContent = '🔴 NOT YET — ' + fmt(TARGET - scAnnual) + ' gap'; scTag.className = 'tag risk'; }
 
-  // ===== Checklist =====
-  const roverMargin = pnl.rev > 0 ? pnl.net / pnl.rev : 0;
+  // Checklist
   const checks = [
     { label: `Combined income ≥ $500K/yr (currently ${fmt(annual)})`, status: annual >= TARGET ? 'on' : annual >= TARGET*0.7 ? 'warn' : 'risk' },
     { label: `Rover revenue ≥ $100K/mo (currently ${fmt(v.roverRev)})`, status: v.roverRev >= 100000 ? 'on' : v.roverRev >= 80000 ? 'warn' : 'risk' },
-    { label: `Rover net margin ≥ 30% (currently ${(roverMargin*100).toFixed(1)}%)`, status: roverMargin >= 0.30 ? 'on' : roverMargin >= 0.20 ? 'warn' : 'risk' },
+    { label: `Rover net margin ≥ 20% (currently ${(v.netMargin*100).toFixed(1)}%)`, status: v.netMargin >= 0.20 ? 'on' : v.netMargin >= 0.15 ? 'warn' : 'risk' },
     { label: `Lunouri profitable ≥ $3K/mo (currently ${fmt(v.lunouri)})`, status: v.lunouri >= 3000 ? 'on' : v.lunouri > 0 ? 'warn' : 'risk' },
     { label: '6-month emergency fund ($50K+)', status: 'warn' },
     { label: 'Rover runs without Kenny daily', status: 'warn' },
@@ -348,10 +250,10 @@ function update() {
     `<div class="row"><label>${c.label}</label><span class="tag ${c.status}">${c.status === 'on' ? 'On Track' : c.status === 'warn' ? 'Needs Work' : 'Blocker'}</span></div>`
   ).join('');
 
-  // ===== Timeline =====
+  // Timeline
   const milestones = [
     { title: 'Rover hits $80K/mo revenue', sub: 'Current baseline', done: v.roverRev >= 80000 },
-    { title: 'Rover hits $100K/mo revenue', sub: `Net earnings ~${fmt(calcRoverPnL(100000, v.cpPct, v.dtPct, v.opex*1.05).net)}/mo`, current: v.roverRev >= 80000 && v.roverRev < 100000 },
+    { title: 'Rover hits $100K/mo revenue', sub: `Net: ~${fmt(roverNet(100000, v.netMargin))}/mo`, current: v.roverRev >= 80000 && v.roverRev < 100000 },
     { title: 'Lunouri > $5K/mo profit', sub: 'Leggings shipment → 3PL → paid ads', current: v.lunouri >= 1000 && v.lunouri < 5000 },
     { title: 'Combined income > $400K/yr', sub: '80% of quit target', done: annual >= 400000, current: annual >= 350000 && annual < 400000 },
     { title: '$500K/yr sustained 3+ months', sub: 'Ready to quit with confidence', done: annual >= TARGET },
@@ -361,18 +263,23 @@ function update() {
     `<div class="milestone ${m.done ? 'done' : m.current ? 'current' : ''}"><div class="m-title">${m.title}</div><div class="m-sub">${m.sub}</div></div>`
   ).join('');
 
-  // ===== Levers =====
-  const currentNet = pnl.net;
+  // Levers
+  const currentNetMonthly = net;
   const levers = [
     {
       label: 'Grow Rover to $100K/mo',
-      impact: (calcRoverPnL(100000, v.cpPct, v.dtPct, v.opex * 1.05).net - currentNet) * 12,
-      note: `+${fmt(100000-v.roverRev)}/mo revenue → net goes from ${fmt(currentNet)} to ~${fmt(calcRoverPnL(100000, v.cpPct, v.dtPct, v.opex*1.05).net)}/mo`
+      impact: (roverNet(100000, v.netMargin) - currentNetMonthly) * 12,
+      note: `Net goes from ${fmt(currentNetMonthly)} to ${fmt(roverNet(100000, v.netMargin))}/mo`
     },
     {
-      label: 'Reduce contractor cost % by 3pts',
-      impact: (calcRoverPnL(v.roverRev, v.cpPct-3, v.dtPct, v.opex).net - currentNet) * 12,
-      note: `CP from ${v.cpPct}% → ${v.cpPct-3}% via scheduling optimization, better routing`
+      label: 'Grow Rover to $150K/mo',
+      impact: (roverNet(150000, v.netMargin) - currentNetMonthly) * 12,
+      note: `Net goes from ${fmt(currentNetMonthly)} to ${fmt(roverNet(150000, v.netMargin))}/mo`
+    },
+    {
+      label: 'Improve net margin to 20%',
+      impact: (roverNet(v.roverRev, 0.20) - currentNetMonthly) * 12,
+      note: `Same revenue, 5pts better margin → +${fmt(v.roverRev * 0.05)}/mo`
     },
     {
       label: 'Scale Lunouri to $5K/mo profit',
@@ -380,19 +287,9 @@ function update() {
       note: 'Leggings in transit, paid ads pipeline, AI creative'
     },
     {
-      label: 'Eliminate drive time pay',
-      impact: (calcRoverPnL(v.roverRev, v.cpPct, 0, v.opex).net - currentNet) * 12,
-      note: `Currently ${v.dtPct}% of revenue — renegotiate or optimize scheduling`
-    },
-    {
-      label: 'Grow Rover to $150K/mo',
-      impact: (calcRoverPnL(150000, v.cpPct, v.dtPct, v.opex * 1.15).net - currentNet) * 12,
-      note: `Net earnings ~${fmt(calcRoverPnL(150000, v.cpPct, v.dtPct, v.opex*1.15).net)}/mo at scale`
-    },
-    {
-      label: 'Cut advertising spend 50%',
-      impact: (pnl.ads * 0.5) * 12,
-      note: `Ads currently ~${fmt(pnl.ads)}/mo — focus on organic/referral growth`
+      label: 'Improve net margin to 25%',
+      impact: (roverNet(v.roverRev, 0.25) - currentNetMonthly) * 12,
+      note: `Better contractor rates, scheduling optimization, lower overhead`
     },
   ].filter(l => l.impact > 0).sort((a,b) => b.impact - a.impact);
 
@@ -405,26 +302,24 @@ function update() {
 
 function save() {
   const v = getVals();
-  localStorage.setItem('quit-w2-tracker-v2', JSON.stringify(v));
+  localStorage.setItem('quit-w2-tracker-v3', JSON.stringify(v));
 }
 
 function load() {
   try {
-    const saved = JSON.parse(localStorage.getItem('quit-w2-tracker-v2'));
-    if (saved) {
-      if (saved.snap !== undefined) $('snap').value = saved.snap;
-      if (saved.roverRev !== undefined) $('rover-rev').value = saved.roverRev;
-      if (saved.lunouri !== undefined) $('lunouri').value = saved.lunouri;
-      if (saved.other !== undefined) $('other').value = saved.other;
-      if (saved.cpPct !== undefined) $('cp-pct').value = saved.cpPct;
-      if (saved.dtPct !== undefined) $('dt-pct').value = saved.dtPct;
-      if (saved.opex !== undefined) $('opex').value = saved.opex;
+    const s = JSON.parse(localStorage.getItem('quit-w2-tracker-v3'));
+    if (s) {
+      if (s.snap !== undefined) $('snap').value = s.snap;
+      if (s.roverRev !== undefined) $('rover-rev').value = s.roverRev;
+      if (s.lunouri !== undefined) $('lunouri').value = s.lunouri;
+      if (s.other !== undefined) $('other').value = s.other;
+      if (s.netMargin !== undefined) $('net-margin').value = s.netMargin * 100;
     }
   } catch(e) {}
 }
 
 load();
-[...inputIds, ...sliderIds].forEach(id => $(id).addEventListener('input', update));
+inputIds.forEach(id => $(id).addEventListener('input', update));
 update();
 </script>
 </body>
