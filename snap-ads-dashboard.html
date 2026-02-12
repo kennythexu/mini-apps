@@ -53,6 +53,9 @@
   <button onclick="applyFilter()" style="background:#FFFC00;color:#000;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-weight:600;">Apply</button>
 </div>
 
+<h2>📋 Executive Summary</h2>
+<div class="card" id="execSummary" style="padding:16px;margin-bottom:20px;"></div>
+
 <h2>💰 Q1 Quota Pacing</h2>
 <div class="grid" id="pacingCards"></div>
 <div class="chart-container"><canvas id="pacingChart"></canvas></div>
@@ -185,10 +188,94 @@ function renderAcctTable() {
 }
 renderAcctTabs(); renderAcctChart(); renderAcctTable();
 
+// ---- Executive Summary ----
+(function() {
+  const kpi = DATA.kpiTable;
+  const totalL7D = kpi.reduce((s,k) => s + k.spend7d, 0);
+  // Yesterday spend
+  const yd = DATA.yesterdaySpend;
+  // MTD spend = Q1 cumulative (since Q1 started Jan 1)
+  const mtd = DATA.cumulativeSpend;
+  const daysInMonth = new Date(DATA.latestDate).getDate();
+
+  // Pacing status
+  const pacingPct = DATA.attainmentPct;
+  const expectedPct = Math.round(DATA.daysElapsed / DATA.totalQ1Days * 1000) / 10;
+  const pacingDelta = Math.round((pacingPct - expectedPct) * 10) / 10;
+  const pacingStatus = pacingDelta >= 0
+    ? '<span class="badge badge-green">On Pace (' + pacingPct + '% vs ' + expectedPct + '% expected)</span>'
+    : '<span class="badge badge-red">Behind Pace (' + pacingPct + '% vs ' + expectedPct + '% expected)</span>';
+
+  // Top highlights: accounts hitting/missing targets
+  const hitting = kpi.filter(k => k.target && k.isHardTarget && ((k.metric === 'CPP' ? k.cpp : k.cpi) || Infinity) <= k.target);
+  const missing = kpi.filter(k => k.target && k.isHardTarget && ((k.metric === 'CPP' ? k.cpp : k.cpi) || 0) > k.target);
+  // Biggest spender L7D
+  const topSpender = [...kpi].sort((a,b) => b.spend7d - a.spend7d)[0];
+
+  let html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px;">';
+  html += '<div style="background:#21262d;padding:12px;border-radius:6px;"><div style="color:#8b949e;font-size:11px;text-transform:uppercase;">Yesterday Spend</div><div style="font-size:22px;font-weight:700;color:#FFFC00;">$' + yd.toLocaleString() + '</div></div>';
+  html += '<div style="background:#21262d;padding:12px;border-radius:6px;"><div style="color:#8b949e;font-size:11px;text-transform:uppercase;">L7D Spend (all accts)</div><div style="font-size:22px;font-weight:700;color:#58a6ff;">$' + totalL7D.toLocaleString() + '</div></div>';
+  html += '<div style="background:#21262d;padding:12px;border-radius:6px;"><div style="color:#8b949e;font-size:11px;text-transform:uppercase;">Q1 MTD Spend</div><div style="font-size:22px;font-weight:700;color:#bc8cff;">$' + mtd.toLocaleString() + '</div></div>';
+  html += '<div style="background:#21262d;padding:12px;border-radius:6px;"><div style="color:#8b949e;font-size:11px;text-transform:uppercase;">Q1 Pacing</div><div style="font-size:16px;font-weight:600;margin-top:4px;">' + pacingStatus + '</div></div>';
+  html += '</div>';
+
+  // Highlights
+  html += '<div style="margin-bottom:8px;"><strong style="color:#FFFC00;">🔑 Key Highlights:</strong></div>';
+  html += '<div style="margin-left:12px;">';
+  html += '<div>📊 <strong>Top spender (L7D):</strong> ' + topSpender.name + ' — $' + topSpender.spend7d.toLocaleString() + '</div>';
+  if (hitting.length > 0) html += '<div>✅ <strong>Hitting hard targets:</strong> ' + hitting.map(k => k.name).join(', ') + '</div>';
+  if (missing.length > 0) html += '<div>🚨 <strong>Missing hard targets:</strong> ' + missing.map(k => k.name + ' (' + k.metric + ' $' + (k.metric === 'CPP' ? (k.cpp||0).toFixed(0) : (k.cpi||0).toFixed(0)) + ' vs $' + k.target + ' target)').join(', ') + '</div>';
+  html += '<div>💰 <strong>Daily needed:</strong> $' + DATA.dailyNeeded.toLocaleString() + '/day for remaining ' + DATA.daysRemaining + ' days to hit $' + DATA.quota.toLocaleString() + ' quota</div>';
+  html += '</div>';
+
+  document.getElementById('execSummary').innerHTML = html;
+})();
+
 // ---- Insights & Action Items ----
 (function() {
   const kpi = DATA.kpiTable;
   const adSets = DATA.adSetInsights || {};
+
+  // IMPORTANT: Declare these BEFORE getAcctInsights so they're available when called
+  const latestDt = new Date(DATA.latestDate + 'T00:00:00');
+  const bufDays = DATA.bufferDays || {};
+  const defaultBuf = 3;
+  const fmtDate = d => d.toISOString().slice(0,10);
+
+  const FUNNEL = {
+    awareness: ['IMPRESSIONS','VIDEO_VIEWS','SWIPES'],
+    midFunnel: ['APP_INSTALLS','APP_INSTALL','APP_SIGNUP','SIGN_UPS'],
+    dr: ['APP_PURCHASE','PURCHASE','PURCHASES'],
+  };
+  function getFunnel(optGoal) {
+    const g = (optGoal || '').toUpperCase();
+    if (FUNNEL.awareness.some(x => g.includes(x))) return 'awareness';
+    if (FUNNEL.midFunnel.some(x => g.includes(x))) return 'midFunnel';
+    if (FUNNEL.dr.some(x => g.includes(x))) return 'dr';
+    return 'other';
+  }
+  function funnelLabel(f) {
+    return {awareness:'🔔 Awareness (CPM focus)',midFunnel:'📲 Mid-Funnel (CPI + CPP)',dr:'🎯 Direct Response (CPP)',other:'❓ Other'}[f] || f;
+  }
+  function funnelMetric(f, s) {
+    if (f === 'awareness') return s.spend > 0 && s.swipes > 0 ? 'CPM ~$' + ((s.spend / (s.swipes || 1)) * 1000).toFixed(2) : '';
+    if (f === 'midFunnel') {
+      let parts = [];
+      if (s.cpi != null) parts.push('CPI $' + s.cpi.toFixed(2));
+      if (s.cpp != null) parts.push('CPP $' + s.cpp.toFixed(2));
+      return parts.join(' | ') || '';
+    }
+    return s.cpp != null ? 'CPP $' + s.cpp.toFixed(2) : '';
+  }
+
+  // Attribution note per ad set
+  function attrNote(s, acctName) {
+    const nonSkan = ['Blockratize', 'Fanatics FMX'];
+    if (nonSkan.includes(acctName)) return 'Platform (non-SKAN account)';
+    const os = (s.os || '').toLowerCase();
+    if (os === 'ios') return 'SKAN';
+    return 'Platform';
+  }
 
   const acctMap = {
     'Fanatics': {accounts: ['Fanatics SB','Fanatics Casino','Fanatics FMX']},
@@ -219,6 +306,37 @@ renderAcctTabs(); renderAcctChart(); renderAcctTable();
       const acctCutoff = new Date(latestDt); acctCutoff.setDate(acctCutoff.getDate() - acctBuf);
       const acctStart = new Date(acctCutoff); acctStart.setDate(acctStart.getDate() - 6);
       lines.push('<div style="margin:10px 0 6px;"><strong style="color:#FFFC00;font-size:14px;">' + acctName + '</strong> — ' + sets.length + ' active ad sets, L7D spend: ' + fmt(acctKpi.spend7d) + ' <span style="color:#8b949e;font-size:11px;">(' + fmtDate(acctStart) + ' to ' + fmtDate(acctCutoff) + ', buf: ' + acctBuf + 'd)</span></div>');
+
+      // Funnel stage segmentation
+      const byFunnel = {};
+      sets.forEach(s => {
+        const f = getFunnel(s.optGoal);
+        if (!byFunnel[f]) byFunnel[f] = [];
+        byFunnel[f].push(s);
+      });
+      const funnelKeys = ['awareness','midFunnel','dr','other'].filter(f => byFunnel[f] && byFunnel[f].length > 0);
+      if (funnelKeys.length > 1 || (funnelKeys.length === 1 && funnelKeys[0] !== 'other')) {
+        lines.push('<div style="margin:8px 0 4px 12px;">📊 <strong>Funnel Stage Breakdown:</strong></div>');
+        funnelKeys.forEach(f => {
+          const fSets = byFunnel[f];
+          const fSpend = fSets.reduce((s,x) => s + x.spend, 0);
+          const fInst = fSets.reduce((s,x) => s + x.installs, 0);
+          const fPurch = fSets.reduce((s,x) => s + x.purchases, 0);
+          const fCpi = fInst > 0 ? fSpend / fInst : null;
+          const fCpp = fPurch > 0 ? fSpend / fPurch : null;
+          let metricStr = '';
+          if (f === 'awareness') metricStr = 'Spend ' + fmt(fSpend);
+          else if (f === 'midFunnel') metricStr = (fCpi ? 'CPI ' + fmtD(fCpi) : '') + (fCpp ? ' | CPP ' + fmtD(fCpp) : '') + ' | Spend ' + fmt(fSpend);
+          else metricStr = (fCpp ? 'CPP ' + fmtD(fCpp) : 'No purchases') + ' | Spend ' + fmt(fSpend);
+          lines.push('<div style="margin:2px 0 2px 24px;">' + funnelLabel(f) + ': ' + metricStr + ' (' + fSets.length + ' ad sets)</div>');
+          // Top 3 ad sets in this funnel with attribution note
+          fSets.sort((a,b) => b.spend - a.spend);
+          fSets.slice(0, 3).forEach(s => {
+            const attr = attrNote(s, acctName);
+            lines.push('<div style="margin:1px 0 1px 36px;font-size:12px;color:#8b949e;">· ' + truncName(s.adSetName, 45) + ' — ' + funnelMetric(f, s) + ' [' + attr + ']' + (s.bidStrategy ? ' ' + s.bidStrategy.replace(/_/g,' ') : '') + (s.bid ? ' bid ' + fmtD(s.bid) : '') + '</div>');
+          });
+        });
+      }
 
       // 1. Top/Bottom performers
       const withCpp = sets.filter(s => s.cpp != null && s.spend > 500);
@@ -488,13 +606,8 @@ renderAcctTabs(); renderAcctChart(); renderAcctTable();
   }
 
   // Compute and display timeframe note
-  const latestDt = new Date(DATA.latestDate + 'T00:00:00');
-  const bufDays = DATA.bufferDays || {};
-  const defaultBuf = 3;
-  // Show the general L7D range (using min buffer = 3)
   const cutoff = new Date(latestDt); cutoff.setDate(cutoff.getDate() - defaultBuf);
   const l7dStart = new Date(cutoff); l7dStart.setDate(l7dStart.getDate() - 6);
-  const fmtDate = d => d.toISOString().slice(0,10);
   const timeframeNote = '<div style="margin-bottom:12px;padding:8px 12px;background:#21262d;border-radius:6px;font-size:13px;">📅 <strong>Lookback Window: L7D</strong> — Based on last 7 days of data (' + fmtDate(l7dStart) + ' to ' + fmtDate(cutoff) + '), excluding attribution buffer days per account (3-5 days). Android ad sets use Platform attribution; iOS uses SKAN.</div>';
 
   document.getElementById('insightsSection').innerHTML = timeframeNote + pacingNote + '<p style="color:#8b949e;font-size:12px;margin-bottom:10px;">Click each account for ad-set-level breakdowns with specific bid, OS, optimization goal, and targeting analysis.</p>' + insightsHtml;
