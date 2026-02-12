@@ -199,6 +199,8 @@ function renderAcctTable() {
 }
 renderAcctTabs(); renderAcctChart(); renderAcctTable();
 
+const latestDt = new Date(DATA.latestDate + 'T00:00:00');
+
 // ---- Executive Summary ----
 (function() {
   const kpi = DATA.kpiTable;
@@ -262,6 +264,7 @@ renderAcctTabs(); renderAcctChart(); renderAcctTable();
 
 // ---- Insights & Action Items ----
 (function() {
+  try {
   const kpi = DATA.kpiTable;
   const adSets = DATA.adSetInsights || {};
 
@@ -649,6 +652,7 @@ renderAcctTabs(); renderAcctChart(); renderAcctTable();
   const timeframeNote = '<div style="margin-bottom:12px;padding:8px 12px;background:#21262d;border-radius:6px;font-size:13px;">📅 <strong>Lookback Window: L7D</strong> — Based on last 7 days of data (' + fmtDate(l7dStart) + ' to ' + fmtDate(cutoff) + '), excluding attribution buffer days per account (3-5 days). Android ad sets use Platform attribution; iOS uses SKAN.</div>';
 
   document.getElementById('insightsSection').innerHTML = timeframeNote + pacingNote + '<p style="color:#8b949e;font-size:12px;margin-bottom:10px;">Click each account for ad-set-level breakdowns with specific bid, OS, optimization goal, and targeting analysis.</p>' + insightsHtml;
+  } catch(e) { document.getElementById('insightsSection').innerHTML = '<div style="color:#f85149;padding:16px;">⚠️ Insights error: ' + e.message + '<br><pre>' + e.stack + '</pre></div>'; }
 })();
 
 function applyFilter() {
