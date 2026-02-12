@@ -198,13 +198,30 @@ renderAcctTabs(); renderAcctChart(); renderAcctTable();
     'Blockratize': {accounts: ['Blockratize']},
   };
 
+  // Funnel classification
+  const UPPER_FUNNEL = ['IMPRESSIONS','VIDEO_VIEWS','SWIPES'];
+  const MID_FUNNEL = ['APP_INSTALLS','APP_SIGNUP'];
+  const LOWER_FUNNEL = ['APP_PURCHASE','PIXEL_ADD_TO_CART','PIXEL_SIGNUP'];
+
+  function funnelTier(optGoal) {
+    if (UPPER_FUNNEL.includes(optGoal)) return 'upper';
+    if (MID_FUNNEL.includes(optGoal)) return 'mid';
+    if (LOWER_FUNNEL.includes(optGoal)) return 'lower';
+    return 'other';
+  }
+  function funnelLabel(tier) {
+    return {upper:'🔔 Awareness',mid:'📲 Mid-Funnel (Install/Signup)',lower:'💰 DR / Purchase',other:'❓ Other'}[tier] || tier;
+  }
+
   function fmt(v) { return v != null ? '$' + Math.round(v).toLocaleString() : 'N/A'; }
   function fmtD(v) { return v != null ? '$' + v.toFixed(2) : 'N/A'; }
   function pct(a, b) { return b ? Math.round((a - b) / b * 100) : 0; }
   function truncName(n, max) { return n && n.length > max ? n.substring(0, max) + '…' : (n || '—'); }
 
-  function parseTargeting(json) {
-    try { return JSON.parse(json); } catch(e) { return null; }
+  function cpmCalc(spend, swipes, multiplier) {
+    // Approximate impressions from swipes with a rough swipe rate
+    // Since we don't have impressions, use spend directly for CPM comparison (relative)
+    return null; // We'll use spend/swipes as proxy metrics
   }
 
   function getAcctInsights(acctNames) {
@@ -217,235 +234,175 @@ renderAcctTabs(); renderAcctChart(); renderAcctTable();
 
       lines.push('<div style="margin:10px 0 6px;"><strong style="color:#FFFC00;font-size:14px;">' + acctName + '</strong> — ' + sets.length + ' active ad sets, L7D spend: ' + fmt(acctKpi.spend7d) + '</div>');
 
-      // 1. Top/Bottom performers
-      const withCpp = sets.filter(s => s.cpp != null && s.spend > 500);
-      const withCpi = sets.filter(s => s.cpi != null && s.spend > 500);
-      if (withCpp.length >= 2) {
-        const sorted = [...withCpp].sort((a,b) => a.cpp - b.cpp);
-        const best = sorted[0];
-        const worst = sorted[sorted.length - 1];
-        lines.push('<div style="margin:4px 0 4px 12px;">🏆 <strong>Top performer:</strong> <em>' + truncName(best.adSetName, 50) + '</em> — CPP ' + fmtD(best.cpp) + ' on ' + fmt(best.spend) + ' spend (' + best.purchases + ' purchases)');
-        if (best.bidStrategy) lines.push(' [' + best.bidStrategy.replace(/_/g,' ') + (best.bid ? ', bid ' + fmt(best.bid) : '') + ']');
-        lines.push('</div>');
-        if (worst.cpp > best.cpp * 1.5) {
-          lines.push('<div style="margin:4px 0 4px 12px;">🚨 <strong>Worst performer:</strong> <em>' + truncName(worst.adSetName, 50) + '</em> — CPP ' + fmtD(worst.cpp) + ' on ' + fmt(worst.spend) + ' spend (' + worst.purchases + ' purchases)');
-          if (worst.bidStrategy) lines.push(' [' + worst.bidStrategy.replace(/_/g,' ') + (worst.bid ? ', bid ' + fmt(worst.bid) : '') + ']');
-          lines.push('</div>');
-          // Specific recommendation
-          if (worst.spend > 5000 && worst.cpp > (acctKpi.target || worst.cpp) * 1.5) {
-            lines.push('<div style="margin:2px 0 6px 24px;color:#f0883e;">→ Consider <strong>pausing</strong> this ad set or reducing bid' + (worst.bid ? ' from ' + fmt(worst.bid) + ' to ~' + fmt(worst.bid * 0.6) : '') + '. Reallocate budget to top performer.</div>');
-          }
-        }
-      } else if (withCpi.length >= 2) {
-        const sorted = [...withCpi].sort((a,b) => a.cpi - b.cpi);
-        const best = sorted[0];
-        const worst = sorted[sorted.length - 1];
-        lines.push('<div style="margin:4px 0 4px 12px;">🏆 <strong>Top performer:</strong> <em>' + truncName(best.adSetName, 50) + '</em> — CPI ' + fmtD(best.cpi) + ' on ' + fmt(best.spend) + ' spend</div>');
-        if (worst.cpi > best.cpi * 1.5) {
-          lines.push('<div style="margin:4px 0 4px 12px;">🚨 <strong>Worst performer:</strong> <em>' + truncName(worst.adSetName, 50) + '</em> — CPI ' + fmtD(worst.cpi) + ' on ' + fmt(worst.spend) + ' spend</div>');
-        }
-      }
-
-      // 2. Bid strategy comparison
-      const byStrategy = {};
+      // Group by funnel tier
+      const byTier = {};
       sets.forEach(s => {
-        const strat = s.bidStrategy || 'UNKNOWN';
-        if (!byStrategy[strat]) byStrategy[strat] = {spend: 0, installs: 0, purchases: 0, sets: []};
-        byStrategy[strat].spend += s.spend;
-        byStrategy[strat].installs += s.installs;
-        byStrategy[strat].purchases += s.purchases;
-        byStrategy[strat].sets.push(s);
+        const tier = funnelTier(s.optGoal || 'UNKNOWN');
+        if (!byTier[tier]) byTier[tier] = [];
+        byTier[tier].push(s);
       });
-      const strategies = Object.entries(byStrategy).filter(([k,v]) => v.spend > 1000);
-      if (strategies.length >= 2) {
-        const stratLines = strategies.map(([k,v]) => {
-          const cpp = v.purchases > 0 ? v.spend / v.purchases : null;
-          const cpi = v.installs > 0 ? v.spend / v.installs : null;
-          return {name: k.replace(/_/g,' '), cpp, cpi, spend: v.spend, count: v.sets.length, sets: v.sets};
-        }).filter(s => s.cpp != null || s.cpi != null);
 
-        if (stratLines.length >= 2) {
-          lines.push('<div style="margin:8px 0 4px 12px;">📊 <strong>Bid Strategy Comparison:</strong></div>');
-          const useMetric = stratLines.some(s => s.cpp != null) ? 'cpp' : 'cpi';
-          const metricLabel = useMetric === 'cpp' ? 'CPP' : 'CPI';
-          stratLines.sort((a,b) => ((a[useMetric]||9999) - (b[useMetric]||9999)));
-          stratLines.forEach(s => {
-            const val = s[useMetric];
-            lines.push('<div style="margin:2px 0 2px 24px;">' + s.name + ': <strong>' + metricLabel + ' ' + (val ? fmtD(val) : 'N/A') + '</strong> (' + s.count + ' ad sets, ' + fmt(s.spend) + ' spend)</div>');
+      // Process each tier
+      ['upper','mid','lower','other'].forEach(tier => {
+        const tierSets = byTier[tier];
+        if (!tierSets || tierSets.length === 0) return;
+        const tierSpend = tierSets.reduce((s,x) => s + x.spend, 0);
+        const tierLabel = funnelLabel(tier);
+        const goals = [...new Set(tierSets.map(s => (s.optGoal||'').replace(/_/g,' ')))].join(', ');
+
+        lines.push('<div style="margin:10px 0 4px 8px;padding:6px 10px;background:#21262d;border-radius:4px;"><strong>' + tierLabel + '</strong> <span style="color:#8b949e;font-size:12px;">(' + tierSets.length + ' ad sets, ' + fmt(tierSpend) + ' spend — ' + goals + ')</span></div>');
+
+        if (tier === 'upper') {
+          // AWARENESS: KPIs are CPM proxy (spend efficiency), swipe rate
+          // We don't have impressions, so use cost-per-swipe as a proxy efficiency metric
+          const withSwipes = tierSets.filter(s => s.swipes > 0 && s.spend > 500);
+          if (withSwipes.length > 0) {
+            const sorted = [...withSwipes].sort((a,b) => (a.spend/a.swipes) - (b.spend/b.swipes));
+            const best = sorted[0];
+            const worst = sorted[sorted.length - 1];
+            const avgCPS = tierSpend / tierSets.reduce((s,x) => s + x.swipes, 0);
+            lines.push('<div style="margin:4px 0 2px 20px;">📊 <strong>Cost per Swipe:</strong> avg ' + fmtD(avgCPS) + ' — ranges ' + fmtD(best.spend/best.swipes) + ' to ' + fmtD(worst.spend/worst.swipes) + '</div>');
+            lines.push('<div style="margin:2px 0 2px 20px;">🏆 Best: <em>' + truncName(best.adSetName, 50) + '</em> — ' + fmtD(best.spend/best.swipes) + '/swipe, ' + best.swipes.toLocaleString() + ' swipes on ' + fmt(best.spend) + '</div>');
+            if (worst.spend/worst.swipes > (best.spend/best.swipes) * 1.5 && sorted.length >= 2) {
+              lines.push('<div style="margin:2px 0 2px 20px;">⚠️ Least efficient: <em>' + truncName(worst.adSetName, 50) + '</em> — ' + fmtD(worst.spend/worst.swipes) + '/swipe (' + pct(worst.spend/worst.swipes, best.spend/best.swipes) + '% above best)</div>');
+            }
+          }
+          // Note: No conversion flags for awareness
+          lines.push('<div style="margin:4px 0 2px 20px;color:#8b949e;font-size:11px;"><em>ℹ️ Awareness-optimized — zero conversions expected. Monitor reach/CPM efficiency.</em></div>');
+
+        } else if (tier === 'mid') {
+          // MID-FUNNEL: CPI is primary KPI
+          const withCpi = tierSets.filter(s => s.cpi != null && s.spend > 500);
+          if (withCpi.length > 0) {
+            const sorted = [...withCpi].sort((a,b) => a.cpi - b.cpi);
+            const best = sorted[0];
+            const worst = sorted[sorted.length - 1];
+            const totalInstalls = tierSets.reduce((s,x) => s + x.installs, 0);
+            const avgCpi = totalInstalls > 0 ? tierSpend / totalInstalls : null;
+            lines.push('<div style="margin:4px 0 2px 20px;">📊 <strong>CPI:</strong> avg ' + (avgCpi ? fmtD(avgCpi) : 'N/A') + ' — ranges ' + fmtD(best.cpi) + ' to ' + fmtD(worst.cpi) + ' | ' + totalInstalls.toLocaleString() + ' total installs</div>');
+            lines.push('<div style="margin:2px 0 2px 20px;">🏆 Best: <em>' + truncName(best.adSetName, 50) + '</em> — CPI ' + fmtD(best.cpi) + ' (' + best.installs + ' installs, ' + fmt(best.spend) + ')</div>');
+            if (sorted.length >= 2 && worst.cpi > best.cpi * 1.5) {
+              lines.push('<div style="margin:2px 0 2px 20px;">🚨 Worst: <em>' + truncName(worst.adSetName, 50) + '</em> — CPI ' + fmtD(worst.cpi) + ' (' + worst.installs + ' installs, ' + fmt(worst.spend) + ')</div>');
+            }
+          }
+          // Flag zero-install sets with significant spend
+          tierSets.filter(s => s.spend > 3000 && s.installs === 0).forEach(s => {
+            lines.push('<div style="margin:2px 0 2px 20px;color:#f85149;">⛔ <em>' + truncName(s.adSetName, 40) + '</em> — ' + fmt(s.spend) + ' spent, 0 installs. Check postback/pixel setup.</div>');
           });
-          // Recommendation
-          const best = stratLines[0];
-          const worst = stratLines[stratLines.length - 1];
-          if (best[useMetric] && worst[useMetric] && worst[useMetric] > best[useMetric] * 1.3) {
-            const worstSetNames = worst.sets.filter(s => s.spend > 1000).slice(0, 3).map(s => truncName(s.adSetName, 35));
-            lines.push('<div style="margin:2px 0 6px 24px;color:#f0883e;">→ ' + worst.name + ' is ' + pct(worst[useMetric], best[useMetric]) + '% more expensive. Consider switching ' + (worstSetNames.length > 0 ? '<em>' + worstSetNames.join('</em>, <em>') + '</em>' : 'underperformers') + ' to <strong>' + best.name + '</strong></div>');
+
+        } else if (tier === 'lower') {
+          // DR: CPP is primary KPI
+          const withCpp = tierSets.filter(s => s.cpp != null && s.spend > 500);
+          if (withCpp.length > 0) {
+            const sorted = [...withCpp].sort((a,b) => a.cpp - b.cpp);
+            const best = sorted[0];
+            const worst = sorted[sorted.length - 1];
+            const totalPurch = tierSets.reduce((s,x) => s + x.purchases, 0);
+            const avgCpp = totalPurch > 0 ? tierSpend / totalPurch : null;
+            lines.push('<div style="margin:4px 0 2px 20px;">📊 <strong>CPP:</strong> avg ' + (avgCpp ? fmtD(avgCpp) : 'N/A') + ' — ranges ' + fmtD(best.cpp) + ' to ' + fmtD(worst.cpp) + ' | ' + totalPurch.toLocaleString() + ' total purchases</div>');
+            if (acctKpi.target) {
+              lines.push('<div style="margin:2px 0 2px 20px;color:#FFFC00;font-size:11px;">🎯 Target CPP: ' + fmtD(acctKpi.target) + (avgCpp ? ' | Actual avg: ' + fmtD(avgCpp) + ' (' + (avgCpp <= acctKpi.target ? '✅ on target' : '⚠️ ' + pct(avgCpp, acctKpi.target) + '% over') + ')' : '') + '</div>');
+            }
+            lines.push('<div style="margin:2px 0 2px 20px;">🏆 Best: <em>' + truncName(best.adSetName, 50) + '</em> — CPP ' + fmtD(best.cpp) + ' (' + best.purchases + ' purchases, ' + fmt(best.spend) + ')</div>');
+            if (sorted.length >= 2 && worst.cpp > best.cpp * 1.5) {
+              lines.push('<div style="margin:2px 0 2px 20px;">🚨 Worst: <em>' + truncName(worst.adSetName, 50) + '</em> — CPP ' + fmtD(worst.cpp) + ' (' + worst.purchases + ' purchases, ' + fmt(worst.spend) + ')</div>');
+            }
           }
+          // Flag zero-purchase sets with significant spend
+          tierSets.filter(s => s.spend > 3000 && s.purchases === 0).forEach(s => {
+            lines.push('<div style="margin:2px 0 2px 20px;color:#f85149;">⛔ <em>' + truncName(s.adSetName, 40) + '</em> — ' + fmt(s.spend) + ' spent, 0 purchases. Check postback/pixel setup or adjust bid.</div>');
+          });
         }
-      }
 
-      // 3. OS performance split
-      const byOS = {};
-      sets.forEach(s => {
-        const os = (s.os || 'both').toLowerCase();
-        if (!byOS[os]) byOS[os] = {spend: 0, installs: 0, purchases: 0, sets: []};
-        byOS[os].spend += s.spend;
-        byOS[os].installs += s.installs;
-        byOS[os].purchases += s.purchases;
-        byOS[os].sets.push(s);
-      });
-      const osEntries = Object.entries(byOS).filter(([k,v]) => v.spend > 1000);
-      if (osEntries.length >= 2) {
-        lines.push('<div style="margin:8px 0 4px 12px;">📱 <strong>OS Performance:</strong></div>');
-        const osData = osEntries.map(([k,v]) => ({
-          os: k.toUpperCase() === 'IOS' ? 'iOS' : (k === 'both' ? 'Both' : k.charAt(0).toUpperCase() + k.slice(1)),
-          cpp: v.purchases > 0 ? v.spend / v.purchases : null,
-          cpi: v.installs > 0 ? v.spend / v.installs : null,
-          spend: v.spend, count: v.sets.length
-        }));
-        const useM = osData.some(o => o.cpp != null) ? 'cpp' : 'cpi';
-        const mLabel = useM === 'cpp' ? 'CPP' : 'CPI';
-        osData.forEach(o => {
-          lines.push('<div style="margin:2px 0 2px 24px;">' + o.os + ': <strong>' + mLabel + ' ' + (o[useM] ? fmtD(o[useM]) : 'N/A') + '</strong> (' + o.count + ' sets, ' + fmt(o.spend) + ')</div>');
+        // Bid strategy comparison within this tier
+        const byStrategy = {};
+        tierSets.forEach(s => {
+          const strat = s.bidStrategy || 'UNKNOWN';
+          if (!byStrategy[strat]) byStrategy[strat] = {spend:0, installs:0, purchases:0, swipes:0, sets:[]};
+          byStrategy[strat].spend += s.spend;
+          byStrategy[strat].installs += s.installs;
+          byStrategy[strat].purchases += s.purchases;
+          byStrategy[strat].swipes += s.swipes;
+          byStrategy[strat].sets.push(s);
         });
-        const validOS = osData.filter(o => o[useM] != null);
-        if (validOS.length >= 2) {
-          validOS.sort((a,b) => a[useM] - b[useM]);
-          const bestOS = validOS[0];
-          const worstOS = validOS[validOS.length - 1];
-          if (worstOS[useM] > bestOS[useM] * 1.3) {
-            lines.push('<div style="margin:2px 0 6px 24px;color:#f0883e;">→ ' + worstOS.os + ' is ' + pct(worstOS[useM], bestOS[useM]) + '% more expensive than ' + bestOS.os + '. Consider shifting budget toward ' + bestOS.os + ' ad sets.</div>');
-          }
+        const strategies = Object.entries(byStrategy).filter(([k,v]) => v.spend > 1000);
+        if (strategies.length >= 2) {
+          lines.push('<div style="margin:6px 0 2px 20px;">📊 <em>Bid strategy within ' + funnelLabel(tier).replace(/[^\w\s\/]/g,'').trim() + ':</em></div>');
+          strategies.forEach(([k,v]) => {
+            let metric;
+            if (tier === 'upper') { metric = v.swipes > 0 ? 'CPS ' + fmtD(v.spend/v.swipes) : 'N/A'; }
+            else if (tier === 'mid') { metric = v.installs > 0 ? 'CPI ' + fmtD(v.spend/v.installs) : 'No installs'; }
+            else { metric = v.purchases > 0 ? 'CPP ' + fmtD(v.spend/v.purchases) : 'No purchases'; }
+            lines.push('<div style="margin:2px 0 2px 32px;">' + k.replace(/_/g,' ') + ': <strong>' + metric + '</strong> (' + v.sets.length + ' sets, ' + fmt(v.spend) + ')</div>');
+          });
         }
-      }
+      }); // end tier loop
 
-      // 4. Optimization goal comparison
-      const byGoal = {};
-      sets.forEach(s => {
-        const goal = s.optGoal || 'UNKNOWN';
-        if (!byGoal[goal]) byGoal[goal] = {spend: 0, installs: 0, purchases: 0, sets: []};
-        byGoal[goal].spend += s.spend;
-        byGoal[goal].installs += s.installs;
-        byGoal[goal].purchases += s.purchases;
-        byGoal[goal].sets.push(s);
-      });
-      const goalEntries = Object.entries(byGoal).filter(([k,v]) => v.spend > 1000);
-      if (goalEntries.length >= 2) {
-        lines.push('<div style="margin:8px 0 4px 12px;">🎯 <strong>Optimization Goal Comparison:</strong></div>');
-        goalEntries.forEach(([k,v]) => {
-          const cpp = v.purchases > 0 ? v.spend / v.purchases : null;
-          const cpi = v.installs > 0 ? v.spend / v.installs : null;
-          const metricVal = cpp != null ? 'CPP ' + fmtD(cpp) : (cpi != null ? 'CPI ' + fmtD(cpi) : 'No conversions');
-          lines.push('<div style="margin:2px 0 2px 24px;">' + k.replace(/_/g,' ') + ': <strong>' + metricVal + '</strong> (' + v.sets.length + ' sets, ' + fmt(v.spend) + ')</div>');
-        });
-      }
-
-      // 5. Conversion window impact
-      const byWindow = {};
-      sets.forEach(s => {
-        const w = s.convWindow || 'default';
-        if (!byWindow[w]) byWindow[w] = {spend: 0, installs: 0, purchases: 0};
-        byWindow[w].spend += s.spend;
-        byWindow[w].installs += s.installs;
-        byWindow[w].purchases += s.purchases;
-      });
-      const windowEntries = Object.entries(byWindow).filter(([k,v]) => v.spend > 1000);
-      if (windowEntries.length >= 2) {
-        lines.push('<div style="margin:8px 0 4px 12px;">⏱️ <strong>Conversion Window:</strong></div>');
-        windowEntries.forEach(([k,v]) => {
-          const cpp = v.purchases > 0 ? v.spend / v.purchases : null;
-          const cpi = v.installs > 0 ? v.spend / v.installs : null;
-          const label = k === 'default' ? 'Default/None' : k.replace(/_/g,' ');
-          const metricVal = cpp != null ? 'CPP ' + fmtD(cpp) : (cpi != null ? 'CPI ' + fmtD(cpi) : 'N/A');
-          lines.push('<div style="margin:2px 0 2px 24px;">' + label + ': <strong>' + metricVal + '</strong> (' + fmt(v.spend) + ')</div>');
-        });
-      }
-
-      // 6. SKOverlay impact
-      const byOverlay = {};
-      sets.forEach(s => {
-        const ov = (s.skoverlay || '').toLowerCase() === 'yes' ? 'SKOverlay ON' : 'SKOverlay OFF';
-        if (!byOverlay[ov]) byOverlay[ov] = {spend: 0, installs: 0, purchases: 0};
-        byOverlay[ov].spend += s.spend;
-        byOverlay[ov].installs += s.installs;
-        byOverlay[ov].purchases += s.purchases;
-      });
-      const overlayEntries = Object.entries(byOverlay).filter(([k,v]) => v.spend > 1000);
-      if (overlayEntries.length >= 2 && overlayEntries.every(([k,v]) => v.installs > 0)) {
-        lines.push('<div style="margin:8px 0 4px 12px;">🪟 <strong>SKOverlay Impact:</strong></div>');
-        overlayEntries.forEach(([k,v]) => {
-          const cpi = v.installs > 0 ? v.spend / v.installs : null;
-          const cpp = v.purchases > 0 ? v.spend / v.purchases : null;
-          lines.push('<div style="margin:2px 0 2px 24px;">' + k + ': CPI ' + (cpi ? fmtD(cpi) : 'N/A') + (cpp ? ' | CPP ' + fmtD(cpp) : '') + ' (' + fmt(v.spend) + ')</div>');
-        });
-      }
-
-      // 7. Targeting insights (age, gender, geo breadth)
-      const targetingGroups = {ageNarrow: [], ageBroad: [], maleOnly: [], femaleOnly: [], allGender: []};
-      sets.forEach(s => {
-        const t = parseTargeting(s.targeting);
-        if (!t) return;
-        const demos = t.demographics || [];
-        const ages = demos.filter(d => d.min_age || d.max_age);
-        if (ages.length > 0) {
-          const minAge = parseInt(ages[0].min_age || '13');
-          const maxAge = parseInt(ages[0].max_age || '99');
-          if (maxAge - minAge < 20) targetingGroups.ageNarrow.push(s);
-          else targetingGroups.ageBroad.push(s);
-          const gender = ages[0].gender;
-          if (gender === 'MALE') targetingGroups.maleOnly.push(s);
-          else if (gender === 'FEMALE') targetingGroups.femaleOnly.push(s);
-          else targetingGroups.allGender.push(s);
-        }
-      });
-      // Check if narrow vs broad age has different performance
-      const narrowSpend = targetingGroups.ageNarrow.reduce((s,x) => s + x.spend, 0);
-      const broadSpend = targetingGroups.ageBroad.reduce((s,x) => s + x.spend, 0);
-      if (narrowSpend > 1000 && broadSpend > 1000) {
-        const narrowPurch = targetingGroups.ageNarrow.reduce((s,x) => s + x.purchases, 0);
-        const broadPurch = targetingGroups.ageBroad.reduce((s,x) => s + x.purchases, 0);
-        if (narrowPurch > 0 && broadPurch > 0) {
-          const narrowCpp = narrowSpend / narrowPurch;
-          const broadCpp = broadSpend / broadPurch;
-          lines.push('<div style="margin:8px 0 4px 12px;">👥 <strong>Targeting:</strong> Narrow age: CPP ' + fmtD(narrowCpp) + ' (' + targetingGroups.ageNarrow.length + ' sets) vs Broad age: CPP ' + fmtD(broadCpp) + ' (' + targetingGroups.ageBroad.length + ' sets)</div>');
-        }
-      }
-
-      // Summary action items
-      lines.push('<div style="margin:10px 0 4px 0;border-top:1px solid #30363d;padding-top:8px;"><strong>🎬 Specific Action Items:</strong></div>');
+      // Action items — grouped by tier
+      lines.push('<div style="margin:10px 0 4px 0;border-top:1px solid #30363d;padding-top:8px;"><strong>🎬 Action Items:</strong></div>');
       const actions = [];
 
-      // Scale winners
-      if (withCpp.length > 0) {
-        const sorted = [...withCpp].sort((a,b) => a.cpp - b.cpp);
-        const best = sorted[0];
-        if (best.cpp < (acctKpi.target || Infinity) * 0.85 && best.spend > 1000) {
-          actions.push('📈 Scale <em>' + truncName(best.adSetName, 40) + '</em> — CPP ' + fmtD(best.cpp) + ' is well under target. Increase daily budget by 20-30%.');
-        }
-      }
+      ['upper','mid','lower'].forEach(tier => {
+        const tierSets = byTier[tier];
+        if (!tierSets || tierSets.length === 0) return;
 
-      // Pause losers
-      sets.filter(s => s.spend > 3000 && s.purchases === 0 && s.installs === 0).forEach(s => {
-        actions.push('⛔ Pause <em>' + truncName(s.adSetName, 40) + '</em> — ' + fmt(s.spend) + ' spent with zero conversions. Check postback/pixel setup.');
+        if (tier === 'upper') {
+          // Awareness actions: CPM/CPS efficiency
+          const withSwipes = tierSets.filter(s => s.swipes > 0 && s.spend > 1000);
+          const avgCPS = withSwipes.length > 0 ? withSwipes.reduce((s,x) => s + x.spend, 0) / withSwipes.reduce((s,x) => s + x.swipes, 0) : null;
+          withSwipes.forEach(s => {
+            const cps = s.spend / s.swipes;
+            if (cps < avgCPS * 0.8) {
+              actions.push('📈 <strong>[Awareness]</strong> Scale <em>' + truncName(s.adSetName, 40) + '</em> — cost/swipe ' + fmtD(cps) + ' is ' + Math.abs(pct(cps, avgCPS)) + '% below avg ' + fmtD(avgCPS) + '. Increase budget.');
+            } else if (cps > avgCPS * 1.5) {
+              actions.push('🔧 <strong>[Awareness]</strong> Optimize creative on <em>' + truncName(s.adSetName, 40) + '</em> — cost/swipe ' + fmtD(cps) + ' is ' + pct(cps, avgCPS) + '% above avg. Test new creatives or tighten targeting.');
+            }
+          });
+        } else if (tier === 'mid') {
+          // Install actions
+          const withCpi = tierSets.filter(s => s.cpi != null && s.spend > 1000);
+          if (withCpi.length > 0) {
+            const sorted = [...withCpi].sort((a,b) => a.cpi - b.cpi);
+            const best = sorted[0];
+            if (sorted.length >= 2 && best.cpi) {
+              actions.push('📈 <strong>[Install]</strong> Scale <em>' + truncName(best.adSetName, 40) + '</em> — CPI ' + fmtD(best.cpi) + ' is best in tier. Increase daily budget 20-30%.');
+            }
+            tierSets.filter(s => s.spend > 3000 && s.installs === 0).forEach(s => {
+              actions.push('⛔ <strong>[Install]</strong> Pause <em>' + truncName(s.adSetName, 40) + '</em> — ' + fmt(s.spend) + ' with 0 installs. Check postback setup.');
+            });
+          }
+        } else if (tier === 'lower') {
+          // DR actions
+          const withCpp = tierSets.filter(s => s.cpp != null && s.spend > 1000);
+          if (withCpp.length > 0) {
+            const sorted = [...withCpp].sort((a,b) => a.cpp - b.cpp);
+            const best = sorted[0];
+            if (best.cpp < (acctKpi.target || Infinity) * 0.85) {
+              actions.push('📈 <strong>[DR]</strong> Scale <em>' + truncName(best.adSetName, 40) + '</em> — CPP ' + fmtD(best.cpp) + ' is well under target ' + (acctKpi.target ? fmtD(acctKpi.target) : '') + '. Increase daily budget 20-30%.');
+            }
+          }
+          if (acctKpi.target) {
+            tierSets.filter(s => s.cpp && s.cpp > acctKpi.target * 2 && s.spend > 2000).forEach(s => {
+              const recBid = s.bid ? fmt(Math.round(s.bid * 0.5)) : null;
+              actions.push('⚡ <strong>[DR]</strong> <em>' + truncName(s.adSetName, 40) + '</em> CPP ' + fmtD(s.cpp) + ' is ' + Math.round(s.cpp / acctKpi.target * 100 - 100) + '% over target' + (recBid ? '. Reduce bid to ~' + recBid : '. Review bid and creative') + '.');
+            });
+          }
+          tierSets.filter(s => s.spend > 3000 && s.purchases === 0).forEach(s => {
+            actions.push('⛔ <strong>[DR]</strong> Pause <em>' + truncName(s.adSetName, 40) + '</em> — ' + fmt(s.spend) + ' with 0 purchases. Check postback/pixel or adjust bid.');
+          });
+        }
       });
 
-      // High CPP with specific bid recommendation
-      if (acctKpi.target) {
-        sets.filter(s => s.cpp && s.cpp > acctKpi.target * 2 && s.spend > 2000).forEach(s => {
-          const recBid = s.bid ? fmt(s.bid * 0.5) : null;
-          actions.push('⚡ <em>' + truncName(s.adSetName, 40) + '</em> CPP ' + fmtD(s.cpp) + ' is ' + Math.round(s.cpp / acctKpi.target * 100 - 100) + '% over target' + (recBid ? '. Reduce bid from ' + fmt(s.bid) + ' to ~' + recBid : '. Review bid and creative') + '.');
-        });
-      }
-
-      // Recent audit activity — surfaces what the agency just changed
+      // Recent audit activity
       const recentAudit = (DATA.allAudit || []).filter(a => {
         const fullName = kpi.find(k => k.name === acctName);
         return fullName && a.account === fullName.fullName;
       }).slice(0, 3);
       if (recentAudit.length > 0) {
-        actions.push('📋 Recent changes by agency: ' + recentAudit.map(a => a.changeType + ' on <em>' + truncName(a.entityName, 30) + '</em> (' + a.date + ')').join('; '));
+        actions.push('📋 Recent changes: ' + recentAudit.map(a => a.changeType + ' on <em>' + truncName(a.entityName, 30) + '</em> (' + a.date + ')').join('; '));
       }
 
-      if (actions.length === 0) actions.push('✅ Performance within normal range — continue monitoring and look for scale opportunities.');
+      if (actions.length === 0) actions.push('✅ All tiers performing within range — continue monitoring.');
       actions.forEach(a => lines.push('<div style="margin:2px 0 2px 12px;">' + a + '</div>'));
     });
     return lines.join('');
@@ -457,17 +414,35 @@ renderAcctTabs(); renderAcctChart(); renderAcctTable();
   Object.entries(acctMap).forEach(([parentName, cfg]) => {
     const accts = cfg.accounts.map(n => kpi.find(k => k.name === n)).filter(Boolean);
     const totalSpend = accts.reduce((s,a) => s + a.spend7d, 0);
-    // Count total ad sets
     const totalSets = cfg.accounts.reduce((s, n) => s + (adSets[n] || []).length, 0);
-    // Find worst performer
-    const allCpp = accts.filter(a => a.cpp && a.target).map(a => ({name: a.name, ratio: (a.metric === 'CPP' ? a.cpp : a.cpi) / a.target}));
-    const worstRatio = allCpp.length > 0 ? allCpp.sort((a,b) => b.ratio - a.ratio)[0] : null;
-    let statusIcon = '✅';
-    if (worstRatio && worstRatio.ratio > 1.2) statusIcon = '🚨';
-    else if (worstRatio && worstRatio.ratio > 1.0) statusIcon = '⚠️';
 
-    let summary = statusIcon + ' $' + totalSpend.toLocaleString() + ' L7D | ' + totalSets + ' ad sets';
-    if (worstRatio && worstRatio.ratio > 1.2) summary += ' | ' + worstRatio.name + ' needs attention';
+    // Count by funnel for summary
+    const tierCounts = {upper:0, mid:0, lower:0};
+    cfg.accounts.forEach(n => {
+      (adSets[n] || []).forEach(s => {
+        const t = funnelTier(s.optGoal || '');
+        if (tierCounts[t] !== undefined) tierCounts[t]++;
+      });
+    });
+    const tierSummary = [];
+    if (tierCounts.upper > 0) tierSummary.push(tierCounts.upper + ' awareness');
+    if (tierCounts.mid > 0) tierSummary.push(tierCounts.mid + ' install');
+    if (tierCounts.lower > 0) tierSummary.push(tierCounts.lower + ' DR');
+
+    // Status based on DR performance only
+    const allDrCpp = [];
+    cfg.accounts.forEach(n => {
+      (adSets[n] || []).filter(s => funnelTier(s.optGoal) === 'lower' && s.cpp != null).forEach(s => allDrCpp.push(s.cpp));
+    });
+    const acctTarget = accts.find(a => a.target) ? accts.find(a => a.target).target : null;
+    let statusIcon = '✅';
+    if (acctTarget && allDrCpp.length > 0) {
+      const avgDrCpp = allDrCpp.reduce((a,b) => a+b, 0) / allDrCpp.length;
+      if (avgDrCpp > acctTarget * 1.2) statusIcon = '🚨';
+      else if (avgDrCpp > acctTarget) statusIcon = '⚠️';
+    }
+
+    let summary = statusIcon + ' $' + totalSpend.toLocaleString() + ' L7D | ' + totalSets + ' ad sets (' + tierSummary.join(', ') + ')';
 
     const id = 'insights-' + parentName.toLowerCase();
     insightsHtml += '<div class="acct-toggle" onclick="var b=document.getElementById(\'' + id + '\');b.classList.toggle(\'open\');this.querySelector(\'.acct-arrow\').classList.toggle(\'open\');"><span class="acct-arrow">▶</span><strong>' + parentName + '</strong> <span style="color:#8b949e;font-size:12px;margin-left:8px;">' + summary + '</span></div>';
@@ -484,7 +459,7 @@ renderAcctTabs(); renderAcctChart(); renderAcctTable();
     pacingNote = '<div style="margin-bottom:12px;padding:10px;background:rgba(63,185,80,0.1);border-radius:6px;">💰 <strong>Q1 On Track:</strong> Run rate $' + q1RunRate.toLocaleString() + ' exceeds quota $' + DATA.quota.toLocaleString() + '</div>';
   }
 
-  document.getElementById('insightsSection').innerHTML = pacingNote + '<p style="color:#8b949e;font-size:12px;margin-bottom:10px;">Click each account for ad-set-level breakdowns with specific bid, OS, optimization goal, and targeting analysis.</p>' + insightsHtml;
+  document.getElementById('insightsSection').innerHTML = pacingNote + '<p style="color:#8b949e;font-size:12px;margin-bottom:10px;">Click each account for funnel-segmented insights. Awareness/DR ad sets are evaluated with goal-appropriate KPIs.</p>' + insightsHtml;
 })();
 
 function applyFilter() {
