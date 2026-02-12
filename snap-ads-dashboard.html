@@ -45,6 +45,11 @@
 <h1>📊 Snap Ads Dashboard</h1>
 <p class="subtitle">Q1 2026 | Updated Feb 12, 2026 | Data through 2026-02-12</p>
 
+<div class="card" style="padding:12px 16px;margin-bottom:16px;border-left:3px solid #d29922;">
+  <div style="font-size:13px;color:#d29922;font-weight:600;margin-bottom:4px;">⚠️ SKAN Attribution Buffer</div>
+  <div style="font-size:12px;color:#8b949e;">SKAN attribution data has a delay. Metrics exclude recent days per account to ensure accuracy: <strong style="color:#e1e4e8;">Caesars 5d</strong>, <strong style="color:#e1e4e8;">Penn 4d</strong>, <strong style="color:#e1e4e8;">all others 3d</strong>.</div>
+</div>
+
 <div class="filter-bar">
   <label>Date Range:</label>
   <input type="date" id="startDate" value="2026-01-01">
@@ -107,10 +112,16 @@ new Chart(spendCtx, {type:'bar',data:{labels:DATA.chartDates,datasets:DATA.paren
 }))},options:{responsive:true,plugins:{legend:{labels:{color:'#8b949e'}}},scales:{x:{stacked:true,ticks:{color:'#8b949e',maxTicksLimit:15},grid:{color:'#21262d'}},y:{stacked:true,ticks:{color:'#8b949e',callback:v=>'$'+(v/1000).toFixed(0)+'K'},grid:{color:'#21262d'}}}}});
 
 // KPI Table
-const kpiHtml = '<thead><tr><th>Account</th><th>7d Spend</th><th>Installs</th><th>Purchases</th><th>CPI</th><th>CPP</th><th>Benchmark / Target</th><th>Status</th></tr></thead><tbody>' +
+const kpiLatestDt = new Date(DATA.latestDate + 'T00:00:00');
+const kpiHtml = '<thead><tr><th>Account</th><th>Data Through</th><th>7d Spend</th><th>Installs</th><th>Purchases</th><th>CPI</th><th>CPP</th><th>Benchmark / Target</th><th>Status</th></tr></thead><tbody>' +
   DATA.kpiTable.map(k => {
     const cpi = k.cpi ? '$'+k.cpi.toFixed(2) : '—';
     const cpp = k.cpp ? '$'+k.cpp.toFixed(2) : '—';
+    // Compute effective date range
+    const cutDt = new Date(kpiLatestDt); cutDt.setDate(cutDt.getDate() - k.bufferDays);
+    const startDt = new Date(cutDt); startDt.setDate(startDt.getDate() - 6);
+    const cutStr = cutDt.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+    const startStr = startDt.toLocaleDateString('en-US', {month:'short', day:'numeric'});
     let benchCell = '—';
     let statusCell = '—';
     if (k.target) {
@@ -128,7 +139,7 @@ const kpiHtml = '<thead><tr><th>Account</th><th>7d Spend</th><th>Installs</th><t
     const cls = k.target && k.isHardTarget ? (
       (k.metric==='CPP' ? k.cpp : k.cpi) && (k.metric==='CPP' ? k.cpp : k.cpi) <= k.target ? 'target-hit' : 'target-miss'
     ) : '';
-    return '<tr class="'+cls+'"><td><strong>'+k.name+'</strong><br><span style="color:#8b949e;font-size:11px">buf: '+k.bufferDays+'d</span></td><td>$'+k.spend7d.toLocaleString()+'</td><td>'+k.installs7d.toLocaleString()+'</td><td>'+k.purchases7d.toLocaleString()+'</td><td>'+cpi+'</td><td>'+cpp+'</td><td>'+benchCell+'</td><td>'+statusCell+'</td></tr>';
+    return '<tr class="'+cls+'"><td><strong>'+k.name+'</strong></td><td style="white-space:nowrap;"><strong style="color:#58a6ff;">thru '+cutStr+'</strong><br><span style="color:#d29922;font-size:11px;">'+k.bufferDays+'d SKAN buffer</span><br><span style="color:#8b949e;font-size:10px;">L7D: '+startStr+'–'+cutStr+'</span></td><td>$'+k.spend7d.toLocaleString()+'</td><td>'+k.installs7d.toLocaleString()+'</td><td>'+k.purchases7d.toLocaleString()+'</td><td>'+cpi+'</td><td>'+cpp+'</td><td>'+benchCell+'</td><td>'+statusCell+'</td></tr>';
   }).join('') + '</tbody>';
 document.getElementById('kpiTable').innerHTML = kpiHtml;
 
@@ -218,6 +229,24 @@ renderAcctTabs(); renderAcctChart(); renderAcctTable();
   html += '<div style="background:#21262d;padding:12px;border-radius:6px;"><div style="color:#8b949e;font-size:11px;text-transform:uppercase;">Q1 MTD Spend</div><div style="font-size:22px;font-weight:700;color:#bc8cff;">$' + mtd.toLocaleString() + '</div></div>';
   html += '<div style="background:#21262d;padding:12px;border-radius:6px;"><div style="color:#8b949e;font-size:11px;text-transform:uppercase;">Q1 Pacing</div><div style="font-size:16px;font-weight:600;margin-top:4px;">' + pacingStatus + '</div></div>';
   html += '</div>';
+
+  // Data freshness per account group
+  const bufGroups = {};
+  DATA.kpiTable.forEach(k => {
+    const buf = k.bufferDays;
+    const cutDt = new Date(latestDt); cutDt.setDate(cutDt.getDate() - buf);
+    const cutStr = cutDt.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+    const key = buf + 'd';
+    if (!bufGroups[key]) bufGroups[key] = {buf, cutStr, names:[]};
+    bufGroups[key].names.push(k.name);
+  });
+  const latestStr = latestDt.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+  let freshnessHtml = '<div style="margin-bottom:12px;padding:10px;background:#21262d;border-radius:6px;font-size:13px;">📅 <strong>Data through ' + latestStr + '</strong>';
+  Object.values(bufGroups).sort((a,b) => a.buf - b.buf).forEach(g => {
+    freshnessHtml += ' &nbsp;|&nbsp; <span style="color:#8b949e;">' + g.names.join(', ') + ':</span> <strong>thru ' + g.cutStr + '</strong> <span style="color:#d29922;">(' + g.buf + 'd buffer)</span>';
+  });
+  freshnessHtml += '</div>';
+  html += freshnessHtml;
 
   // Highlights
   html += '<div style="margin-bottom:8px;"><strong style="color:#FFFC00;">🔑 Key Highlights:</strong></div>';
@@ -587,7 +616,16 @@ renderAcctTabs(); renderAcctChart(); renderAcctTable();
     if (worstRatio && worstRatio.ratio > 1.2) statusIcon = '🚨';
     else if (worstRatio && worstRatio.ratio > 1.0) statusIcon = '⚠️';
 
-    let summary = statusIcon + ' $' + totalSpend.toLocaleString() + ' L7D | ' + totalSets + ' ad sets';
+    // Compute parent-level buffer info for header
+    const parentBufs = cfg.accounts.map(n => bufDays[n] || defaultBuf);
+    const maxBuf = Math.max(...parentBufs);
+    const minBuf = Math.min(...parentBufs);
+    const parentCutoff = new Date(latestDt); parentCutoff.setDate(parentCutoff.getDate() - maxBuf);
+    const parentStart = new Date(parentCutoff); parentStart.setDate(parentStart.getDate() - 6);
+    const bufLabel = maxBuf === minBuf ? maxBuf + 'd buffer' : minBuf + '-' + maxBuf + 'd buffer';
+    const headerDateRange = 'L7D: ' + fmtDate(parentStart) + ' – ' + fmtDate(parentCutoff);
+
+    let summary = statusIcon + ' $' + totalSpend.toLocaleString() + ' L7D | ' + totalSets + ' ad sets | <span style="color:#d29922;">' + headerDateRange + ', ' + bufLabel + '</span>';
     if (worstRatio && worstRatio.ratio > 1.2) summary += ' | ' + worstRatio.name + ' needs attention';
 
     const id = 'insights-' + parentName.toLowerCase();
