@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rover Lead Dashboard</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0f0f1a; color: #eee; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 16px; max-width: 100vw; overflow-x: hidden; }
+  
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+  h1 { font-size: 20px; color: #fff; }
+  .subtitle { color: #666; font-size: 13px; margin-bottom: 16px; }
+  
+  .filter-bar { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .filter-btn { 
+    padding: 8px 16px; border-radius: 20px; border: 1.5px solid #333; 
+    background: transparent; color: #888; font-size: 14px; cursor: pointer; 
+    transition: all 0.2s; font-weight: 500;
+  }
+  .filter-btn.active { background: #4361ee; border-color: #4361ee; color: #fff; }
+  .filter-btn:hover { border-color: #555; }
+  
+  .kpi-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+  .kpi { background: #1a1a2e; border-radius: 12px; padding: 14px; }
+  .kpi-val { font-size: 28px; font-weight: 700; color: #fff; }
+  .kpi-label { font-size: 11px; color: #666; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .kpi-change { font-size: 12px; margin-top: 4px; }
+  .up { color: #4cc9f0; }
+  .down { color: #f72585; }
+  
+  .section-title { font-size: 15px; font-weight: 600; margin: 20px 0 10px; color: #fff; }
+  
+  .chart-container { background: #1a1a2e; border-radius: 12px; padding: 14px; margin-bottom: 16px; overflow-x: auto; }
+  .chart-label { font-size: 12px; color: #888; margin-bottom: 8px; }
+  canvas { width: 100%; height: auto; }
+  
+  .channel-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+  .ch-card { background: #1a1a2e; border-radius: 12px; padding: 12px; }
+  .ch-name { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+  .ch-leads { font-size: 24px; font-weight: 700; color: #fff; margin: 2px 0; }
+  .ch-detail { font-size: 12px; color: #888; }
+  .ch-conv { font-size: 13px; font-weight: 600; margin-top: 4px; }
+  
+  .compare-row { display: flex; gap: 8px; margin-bottom: 16px; }
+  .compare-card { flex: 1; background: #1a1a2e; border-radius: 12px; padding: 12px; text-align: center; }
+  .compare-market { font-size: 11px; color: #666; text-transform: uppercase; margin-bottom: 4px; }
+  .compare-val { font-size: 22px; font-weight: 700; color: #fff; }
+  .compare-sub { font-size: 11px; color: #888; }
+  
+  .bar-chart { position: relative; }
+  .bar-row { display: flex; align-items: center; margin-bottom: 8px; }
+  .bar-label { width: 50px; font-size: 11px; color: #666; flex-shrink: 0; }
+  .bar-track { flex: 1; height: 28px; background: #111; border-radius: 6px; position: relative; overflow: hidden; display: flex; }
+  .bar-fill { height: 100%; transition: width 0.3s; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.9); min-width: 0; }
+  .bar-rate { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 11px; color: #4cc9f0; font-weight: 600; }
+  
+  .conv-line { margin-bottom: 16px; }
+  .conv-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .conv-week { width: 40px; font-size: 11px; color: #666; flex-shrink: 0; }
+  .conv-bar-wrap { flex: 1; height: 22px; background: #111; border-radius: 4px; position: relative; }
+  .conv-bar { height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 6px; font-size: 10px; font-weight: 600; color: #fff; }
+  .conv-pct { width: 40px; text-align: right; font-size: 11px; font-weight: 600; flex-shrink: 0; }
+  
+  .target-line { position: absolute; top: 0; bottom: 0; width: 2px; background: #f72585; }
+  .target-label { position: absolute; top: -14px; font-size: 9px; color: #f72585; transform: translateX(-50%); white-space: nowrap; }
+  
+  .footer { text-align: center; color: #333; font-size: 11px; margin-top: 30px; padding: 10px; }
+  
+  @media (min-width: 600px) {
+    body { padding: 24px; max-width: 700px; margin: 0 auto; }
+    .kpi-grid { grid-template-columns: repeat(4, 1fr); }
+    .channel-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🧹 Rover Lead Dashboard</h1>
+</div>
+<div class="subtitle">Last 13 weeks · Updated <span id="update-date"></span></div>
+
+<div class="filter-bar" id="filters">
+  <button class="filter-btn active" data-market="All">All Markets</button>
+  <button class="filter-btn" data-market="DFW">🤠 DFW</button>
+  <button class="filter-btn" data-market="Chicago">🏙️ Chicago</button>
+  <button class="filter-btn" data-market="Gainesville">🌴 Gainesville</button>
+  <button class="filter-btn" data-market="compare">⚔️ Compare</button>
+</div>
+
+<div id="dashboard"></div>
+
+<div class="footer">⚡ Barry · Auto-refreshed weekly</div>
+
+<script>
+const DATA = {"All":[{"fb":69,"fb_bk":4,"qf":27,"qf_bk":14,"lsa":7,"lsa_bk":0,"tt":20,"tt_bk":5,"oth":41,"oth_bk":5,"total":164,"booked":28,"week":"11/10"},{"fb":69,"fb_bk":2,"qf":30,"qf_bk":4,"lsa":9,"lsa_bk":1,"tt":11,"tt_bk":1,"oth":31,"oth_bk":3,"total":150,"booked":11,"week":"11/17"},{"fb":45,"fb_bk":0,"qf":16,"qf_bk":5,"lsa":5,"lsa_bk":2,"tt":18,"tt_bk":5,"oth":24,"oth_bk":1,"total":108,"booked":13,"week":"11/24"},{"fb":102,"fb_bk":5,"qf":21,"qf_bk":3,"lsa":1,"lsa_bk":1,"tt":18,"tt_bk":3,"oth":38,"oth_bk":2,"total":180,"booked":14,"week":"12/01"},{"fb":108,"fb_bk":9,"qf":18,"qf_bk":9,"lsa":8,"lsa_bk":2,"tt":9,"tt_bk":0,"oth":44,"oth_bk":1,"total":187,"booked":21,"week":"12/08"},{"fb":132,"fb_bk":9,"qf":22,"qf_bk":5,"lsa":8,"lsa_bk":0,"tt":18,"tt_bk":4,"oth":37,"oth_bk":4,"total":217,"booked":22,"week":"12/15"},{"fb":232,"fb_bk":14,"qf":20,"qf_bk":7,"lsa":10,"lsa_bk":1,"tt":2,"tt_bk":1,"oth":19,"oth_bk":1,"total":283,"booked":24,"week":"12/22"},{"fb":212,"fb_bk":13,"qf":31,"qf_bk":7,"lsa":20,"lsa_bk":4,"tt":5,"tt_bk":1,"oth":30,"oth_bk":5,"total":298,"booked":30,"week":"12/29"},{"fb":138,"fb_bk":15,"qf":27,"qf_bk":7,"lsa":8,"lsa_bk":3,"tt":0,"tt_bk":0,"oth":31,"oth_bk":2,"total":204,"booked":27,"week":"01/05"},{"fb":143,"fb_bk":12,"qf":8,"qf_bk":2,"lsa":8,"lsa_bk":4,"tt":0,"tt_bk":0,"oth":31,"oth_bk":7,"total":190,"booked":25,"week":"01/12"},{"fb":59,"fb_bk":8,"qf":16,"qf_bk":4,"lsa":2,"lsa_bk":1,"tt":0,"tt_bk":0,"oth":21,"oth_bk":0,"total":98,"booked":13,"week":"01/19"},{"fb":81,"fb_bk":6,"qf":23,"qf_bk":3,"lsa":6,"lsa_bk":1,"tt":0,"tt_bk":0,"oth":22,"oth_bk":0,"total":132,"booked":10,"week":"01/26"},{"fb":118,"fb_bk":11,"qf":14,"qf_bk":5,"lsa":13,"lsa_bk":3,"tt":0,"tt_bk":0,"oth":37,"oth_bk":0,"total":182,"booked":19,"week":"02/02"}],"DFW":[{"fb":0,"fb_bk":0,"qf":14,"qf_bk":14,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":14,"booked":14,"week":"11/10"},{"fb":0,"fb_bk":0,"qf":4,"qf_bk":4,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":4,"booked":4,"week":"11/17"},{"fb":0,"fb_bk":0,"qf":5,"qf_bk":5,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":5,"booked":5,"week":"11/24"},{"fb":0,"fb_bk":0,"qf":3,"qf_bk":3,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":3,"booked":3,"week":"12/01"},{"fb":0,"fb_bk":0,"qf":9,"qf_bk":9,"lsa":2,"lsa_bk":1,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":11,"booked":10,"week":"12/08"},{"fb":1,"fb_bk":1,"qf":4,"qf_bk":4,"lsa":2,"lsa_bk":0,"tt":1,"tt_bk":1,"oth":3,"oth_bk":2,"total":11,"booked":8,"week":"12/15"},{"fb":93,"fb_bk":1,"qf":8,"qf_bk":7,"lsa":3,"lsa_bk":1,"tt":1,"tt_bk":0,"oth":0,"oth_bk":0,"total":105,"booked":9,"week":"12/22"},{"fb":77,"fb_bk":4,"qf":18,"qf_bk":7,"lsa":9,"lsa_bk":3,"tt":5,"tt_bk":1,"oth":5,"oth_bk":2,"total":114,"booked":17,"week":"12/29"},{"fb":58,"fb_bk":5,"qf":10,"qf_bk":7,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":68,"booked":12,"week":"01/05"},{"fb":69,"fb_bk":5,"qf":7,"qf_bk":2,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":76,"booked":7,"week":"01/12"},{"fb":50,"fb_bk":7,"qf":16,"qf_bk":4,"lsa":1,"lsa_bk":1,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":67,"booked":12,"week":"01/19"},{"fb":72,"fb_bk":4,"qf":23,"qf_bk":3,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":95,"booked":7,"week":"01/26"},{"fb":76,"fb_bk":3,"qf":11,"qf_bk":4,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":87,"booked":7,"week":"02/02"}],"Chicago":[{"fb":0,"fb_bk":0,"qf":0,"qf_bk":0,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":0,"booked":0,"week":"11/10"},{"fb":0,"fb_bk":0,"qf":0,"qf_bk":0,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":0,"booked":0,"week":"11/17"},{"fb":0,"fb_bk":0,"qf":0,"qf_bk":0,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":0,"booked":0,"week":"11/24"},{"fb":21,"fb_bk":1,"qf":0,"qf_bk":0,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":21,"booked":1,"week":"12/01"},{"fb":47,"fb_bk":6,"qf":0,"qf_bk":0,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":47,"booked":6,"week":"12/08"},{"fb":52,"fb_bk":2,"qf":3,"qf_bk":1,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":55,"booked":3,"week":"12/15"},{"fb":116,"fb_bk":13,"qf":0,"qf_bk":0,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":116,"booked":13,"week":"12/22"},{"fb":135,"fb_bk":9,"qf":1,"qf_bk":0,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":7,"oth_bk":0,"total":143,"booked":9,"week":"12/29"},{"fb":80,"fb_bk":10,"qf":2,"qf_bk":0,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":82,"booked":10,"week":"01/05"},{"fb":74,"fb_bk":7,"qf":1,"qf_bk":0,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":75,"booked":7,"week":"01/12"},{"fb":8,"fb_bk":1,"qf":0,"qf_bk":0,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":8,"booked":1,"week":"01/19"},{"fb":9,"fb_bk":2,"qf":0,"qf_bk":0,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":9,"booked":2,"week":"01/26"},{"fb":42,"fb_bk":8,"qf":3,"qf_bk":1,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":45,"booked":9,"week":"02/02"}],"Gainesville":[{"fb":0,"fb_bk":0,"qf":0,"qf_bk":0,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":1,"oth_bk":1,"total":1,"booked":1,"week":"11/10"},{"fb":0,"fb_bk":0,"qf":0,"qf_bk":0,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":0,"booked":0,"week":"11/17"},{"fb":0,"fb_bk":0,"qf":0,"qf_bk":0,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":0,"booked":0,"week":"11/24"},{"fb":13,"fb_bk":0,"qf":0,"qf_bk":0,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":13,"booked":0,"week":"12/01"},{"fb":3,"fb_bk":0,"qf":0,"qf_bk":0,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":3,"booked":0,"week":"12/08"},{"fb":1,"fb_bk":0,"qf":0,"qf_bk":0,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":1,"booked":0,"week":"12/15"},{"fb":10,"fb_bk":0,"qf":0,"qf_bk":0,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":10,"booked":0,"week":"12/22"},{"fb":0,"fb_bk":0,"qf":0,"qf_bk":0,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":0,"booked":0,"week":"12/29"},{"fb":0,"fb_bk":0,"qf":0,"qf_bk":0,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":1,"oth_bk":1,"total":1,"booked":1,"week":"01/05"},{"fb":0,"fb_bk":0,"qf":0,"qf_bk":0,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":0,"booked":0,"week":"01/12"},{"fb":0,"fb_bk":0,"qf":0,"qf_bk":0,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":2,"oth_bk":0,"total":2,"booked":0,"week":"01/19"},{"fb":0,"fb_bk":0,"qf":0,"qf_bk":0,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":0,"booked":0,"week":"01/26"},{"fb":0,"fb_bk":0,"qf":0,"qf_bk":0,"lsa":0,"lsa_bk":0,"tt":0,"tt_bk":0,"oth":0,"oth_bk":0,"total":0,"booked":0,"week":"02/02"}]};
+
+document.getElementById('update-date').textContent = new Date().toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+
+let currentMarket = 'All';
+
+// Filter buttons
+document.getElementById('filters').addEventListener('click', e => {
+  const btn = e.target.closest('.filter-btn');
+  if (!btn) return;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentMarket = btn.dataset.market;
+  render();
+});
+
+function sum(arr, key) { return arr.reduce((s,d) => s + (d[key]||0), 0); }
+function pct(a, b) { return b ? (a/b*100) : 0; }
+function changeStr(cur, prev) {
+  if (!prev) return '<span class="up">NEW</span>';
+  const diff = ((cur-prev)/prev*100);
+  const cls = diff >= 0 ? 'up' : 'down';
+  const arrow = diff >= 0 ? '↑' : '↓';
+  return `<span class="${cls}">${arrow} ${Math.abs(diff).toFixed(0)}%</span>`;
+}
+function ppChange(cur, prev) {
+  const diff = cur - prev;
+  const cls = diff >= 0 ? 'up' : 'down';
+  const arrow = diff >= 0 ? '↑' : '↓';
+  return `<span class="${cls}">${arrow} ${Math.abs(diff).toFixed(1)}pp</span>`;
+}
+
+function renderMarket(data) {
+  const last4 = data.slice(-4), prev4 = data.slice(-8,-4);
+  const l4t = sum(last4,'total'), p4t = sum(prev4,'total');
+  const l4b = sum(last4,'booked'), p4b = sum(prev4,'booked');
+  const l4r = pct(l4b, l4t), p4r = pct(p4b, p4t);
+  const l4fb = sum(last4,'fb'), l4fbb = sum(last4,'fb_bk');
+  const p4fb = sum(prev4,'fb'), p4fbb = sum(prev4,'fb_bk');
+  const l4fbr = pct(l4fbb, l4fb), p4fbr = pct(p4fbb, p4fb);
+  
+  let html = `
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-val">${l4t}</div>
+      <div class="kpi-label">Leads (L4W)</div>
+      <div class="kpi-change">${changeStr(l4t, p4t)} vs prior</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val">${l4b}</div>
+      <div class="kpi-label">Booked (L4W)</div>
+      <div class="kpi-change">${changeStr(l4b, p4b)} vs prior</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val">${l4r.toFixed(1)}%</div>
+      <div class="kpi-label">Conv Rate</div>
+      <div class="kpi-change">${ppChange(l4r, p4r)} vs prior</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val">${l4fbr.toFixed(1)}%</div>
+      <div class="kpi-label">FB Conv</div>
+      <div class="kpi-change">${ppChange(l4fbr, p4fbr)} vs prior</div>
+    </div>
+  </div>`;
+
+  // Weekly volume + conversion chart (horizontal bars)
+  const maxTotal = Math.max(...data.map(d => d.total)) || 1;
+  
+  html += `<div class="section-title">📊 Weekly Volume & Conversion</div>
+  <div class="chart-container"><div class="bar-chart">`;
+  
+  data.forEach(d => {
+    const w = (d.total / maxTotal * 100);
+    const fbW = (d.fb / maxTotal * 100);
+    const otherW = w - fbW;
+    const rate = d.total ? (d.booked/d.total*100).toFixed(1) : '0.0';
+    html += `<div class="bar-row">
+      <div class="bar-label">${d.week}</div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:${fbW}%;background:#4361ee;">${d.fb > 10 ? d.fb : ''}</div>
+        <div class="bar-fill" style="width:${otherW}%;background:#7209b7;">${(d.total-d.fb) > 10 ? (d.total-d.fb) : ''}</div>
+        <div class="bar-rate">${rate}% · ${d.booked}bk</div>
+      </div>
+    </div>`;
+  });
+  html += `</div>
+  <div style="display:flex;gap:12px;margin-top:8px;">
+    <span style="font-size:11px;color:#4361ee;">● FB</span>
+    <span style="font-size:11px;color:#7209b7;">● Other</span>
+    <span style="font-size:11px;color:#4cc9f0;">Conv %</span>
+  </div></div>`;
+  
+  // Channel cards (L4W)
+  const channels = [
+    {name:'FB Leads', key:'fb', bk:'fb_bk', color:'#4361ee', target:12},
+    {name:'Quote Form', key:'qf', bk:'qf_bk', color:'#7209b7', target:30},
+    {name:'LSA', key:'lsa', bk:'lsa_bk', color:'#f77f00', target:30},
+    {name:'Other', key:'oth', bk:'oth_bk', color:'#888', target:null}
+  ];
+  
+  html += `<div class="section-title">📱 By Channel (L4W)</div><div class="channel-grid">`;
+  channels.forEach(ch => {
+    const l = sum(last4, ch.key), b = sum(last4, ch.bk);
+    const p = sum(prev4, ch.key), pb = sum(prev4, ch.bk);
+    const conv = pct(b, l);
+    const tgt = ch.target ? `<span style="color:${conv >= ch.target ? '#4cc9f0' : '#f72585'}">${conv >= ch.target ? '✓' : '✗'} ${ch.target}% target</span>` : '';
+    html += `<div class="ch-card">
+      <div class="ch-name">${ch.name}</div>
+      <div class="ch-leads">${l}</div>
+      <div class="ch-detail">${b} booked · ${changeStr(l, p)}</div>
+      <div class="ch-conv" style="color:${ch.color}">${conv.toFixed(1)}% conv ${tgt}</div>
+    </div>`;
+  });
+  html += `</div>`;
+  
+  // FB Conversion trend
+  html += `<div class="section-title">📱 FB Conversion Trend (12% target)</div>
+  <div class="chart-container"><div class="conv-line">`;
+  const maxFB = Math.max(...data.map(d => d.fb)) || 1;
+  data.forEach(d => {
+    const rate = d.fb ? (d.fb_bk/d.fb*100) : 0;
+    const barW = Math.min(rate / 30 * 100, 100);
+    const targetPos = 12 / 30 * 100;
+    const color = rate >= 12 ? '#4cc9f0' : '#f72585';
+    html += `<div class="conv-row">
+      <div class="conv-week">${d.week}</div>
+      <div class="conv-bar-wrap">
+        <div class="conv-bar" style="width:${barW}%;background:${color};">${d.fb_bk}/${d.fb}</div>
+        <div class="target-line" style="left:${targetPos}%;"></div>
+      </div>
+      <div class="conv-pct" style="color:${color}">${rate.toFixed(1)}%</div>
+    </div>`;
+  });
+  html += `</div></div>`;
+  
+  // Quote Form Conversion trend
+  html += `<div class="section-title">📝 Quote Form Conversion (30% target)</div>
+  <div class="chart-container"><div class="conv-line">`;
+  data.forEach(d => {
+    const rate = d.qf ? (d.qf_bk/d.qf*100) : 0;
+    const barW = Math.min(rate / 80 * 100, 100);
+    const targetPos = 30 / 80 * 100;
+    const color = rate >= 30 ? '#4cc9f0' : '#f72585';
+    html += `<div class="conv-row">
+      <div class="conv-week">${d.week}</div>
+      <div class="conv-bar-wrap">
+        <div class="conv-bar" style="width:${barW}%;background:${color};">${d.qf_bk}/${d.qf}</div>
+        <div class="target-line" style="left:${targetPos}%;"></div>
+      </div>
+      <div class="conv-pct" style="color:${color}">${rate.toFixed(1)}%</div>
+    </div>`;
+  });
+  html += `</div></div>`;
+  
+  return html;
+}
+
+function renderCompare() {
+  const dfw = DATA['DFW'], chi = DATA['Chicago'];
+  const l4d = dfw.slice(-4), l4c = chi.slice(-4);
+  const p4d = dfw.slice(-8,-4), p4c = chi.slice(-8,-4);
+  
+  const metrics = [
+    {label: 'Total Leads (L4W)', d: sum(l4d,'total'), c: sum(l4c,'total'), pd: sum(p4d,'total'), pc: sum(p4c,'total'), fmt:'num'},
+    {label: 'Booked (L4W)', d: sum(l4d,'booked'), c: sum(l4c,'booked'), pd: sum(p4d,'booked'), pc: sum(p4c,'booked'), fmt:'num'},
+    {label: 'Conv Rate', d: pct(sum(l4d,'booked'),sum(l4d,'total')), c: pct(sum(l4c,'booked'),sum(l4c,'total')), pd: pct(sum(p4d,'booked'),sum(p4d,'total')), pc: pct(sum(p4c,'booked'),sum(p4c,'total')), fmt:'pct'},
+    {label: 'FB Conv', d: pct(sum(l4d,'fb_bk'),sum(l4d,'fb')), c: pct(sum(l4c,'fb_bk'),sum(l4c,'fb')), pd: pct(sum(p4d,'fb_bk'),sum(p4d,'fb')), pc: pct(sum(p4c,'fb_bk'),sum(p4c,'fb')), fmt:'pct'},
+    {label: 'FB Volume (L4W)', d: sum(l4d,'fb'), c: sum(l4c,'fb'), pd: sum(p4d,'fb'), pc: sum(p4c,'fb'), fmt:'num'},
+  ];
+  
+  let html = `<div class="section-title">⚔️ DFW vs Chicago — Last 4 Weeks</div>`;
+  
+  metrics.forEach(m => {
+    const dVal = m.fmt === 'pct' ? m.d.toFixed(1)+'%' : m.d;
+    const cVal = m.fmt === 'pct' ? m.c.toFixed(1)+'%' : m.c;
+    const dChg = m.fmt === 'pct' ? ppChange(m.d, m.pd) : changeStr(m.d, m.pd);
+    const cChg = m.fmt === 'pct' ? ppChange(m.c, m.pc) : changeStr(m.c, m.pc);
+    const winner = m.fmt === 'pct' ? (m.d > m.c ? 'dfw' : 'chi') : (m.d > m.c ? 'dfw' : 'chi');
+    
+    html += `<div class="compare-row">
+      <div class="compare-card" style="${winner==='dfw'?'border:1px solid #4361ee33':''}">
+        <div class="compare-market">🤠 DFW</div>
+        <div class="compare-val">${dVal}</div>
+        <div class="compare-sub">${dChg}</div>
+      </div>
+      <div style="display:flex;align-items:center;color:#444;font-size:11px;font-weight:600;">${m.label}</div>
+      <div class="compare-card" style="${winner==='chi'?'border:1px solid #f7258533':''}">
+        <div class="compare-market">🏙️ CHI</div>
+        <div class="compare-val">${cVal}</div>
+        <div class="compare-sub">${cChg}</div>
+      </div>
+    </div>`;
+  });
+  
+  // Side-by-side weekly conversion
+  html += `<div class="section-title">📈 Weekly Conv Rate — Head to Head</div>
+  <div class="chart-container">`;
+  
+  const weeks = DATA['All'].map(d => d.week);
+  weeks.forEach((w, i) => {
+    const dr = dfw[i].total ? (dfw[i].booked/dfw[i].total*100) : 0;
+    const cr = chi[i].total ? (chi[i].booked/chi[i].total*100) : 0;
+    const maxR = 50;
+    html += `<div style="margin-bottom:6px;">
+      <div style="font-size:10px;color:#555;margin-bottom:2px;">${w}</div>
+      <div style="display:flex;gap:4px;align-items:center;">
+        <div style="width:30px;font-size:10px;color:#4361ee;">DFW</div>
+        <div style="flex:1;height:16px;background:#111;border-radius:3px;">
+          <div style="height:100%;width:${Math.min(dr/maxR*100,100)}%;background:#4361ee;border-radius:3px;display:flex;align-items:center;padding-left:4px;font-size:9px;color:#fff;font-weight:600;">${dfw[i].total ? dr.toFixed(0)+'%' : '-'}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:4px;align-items:center;margin-top:2px;">
+        <div style="width:30px;font-size:10px;color:#f72585;">CHI</div>
+        <div style="flex:1;height:16px;background:#111;border-radius:3px;">
+          <div style="height:100%;width:${Math.min(cr/maxR*100,100)}%;background:#f72585;border-radius:3px;display:flex;align-items:center;padding-left:4px;font-size:9px;color:#fff;font-weight:600;">${chi[i].total ? cr.toFixed(0)+'%' : '-'}</div>
+        </div>
+      </div>
+    </div>`;
+  });
+  html += `</div>`;
+  
+  return html;
+}
+
+function render() {
+  const el = document.getElementById('dashboard');
+  if (currentMarket === 'compare') {
+    el.innerHTML = renderCompare();
+  } else {
+    el.innerHTML = renderMarket(DATA[currentMarket]);
+  }
+}
+
+render();
+</script>
+</body>
+</html>
