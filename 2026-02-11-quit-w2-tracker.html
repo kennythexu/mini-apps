@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quit W2 Tracker — Kenny's $500K Dashboard</title>
+<style>
+  :root { --bg: #0a0a0f; --card: #14141f; --border: #1e1e2e; --accent: #6366f1; --green: #22c55e; --red: #ef4444; --yellow: #eab308; --text: #e2e8f0; --muted: #64748b; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 20px; }
+  h1 { text-align: center; font-size: 1.6rem; margin-bottom: 4px; }
+  .subtitle { text-align: center; color: var(--muted); margin-bottom: 24px; font-size: 0.9rem; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; max-width: 1200px; margin: 0 auto; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .card h2 { font-size: 1rem; color: var(--muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 500; }
+  .big-number { font-size: 2.4rem; font-weight: 700; }
+  .row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .row:last-child { border-bottom: none; }
+  .row label { color: var(--muted); font-size: 0.85rem; flex: 1; }
+  .row .val { font-weight: 600; text-align: right; min-width: 100px; }
+  .row input { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; width: 130px; text-align: right; font-size: 0.95rem; }
+  .row input:focus { outline: none; border-color: var(--accent); }
+  .progress-wrap { margin-top: 16px; }
+  .progress-bar { height: 20px; background: var(--bg); border-radius: 10px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 10px; transition: width 0.5s; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+  .stat { text-align: center; padding: 8px; }
+  .stat .sval { font-size: 1.5rem; font-weight: 700; }
+  .stat .lbl { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+  .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .full { grid-column: 1 / -1; }
+  .pnl-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; }
+  .pnl-row.total { border-top: 2px solid var(--border); margin-top: 4px; padding-top: 10px; }
+  .pnl-row .pnl-label { font-size: 0.85rem; color: var(--muted); }
+  .pnl-row .pnl-val { font-weight: 600; font-size: 0.95rem; }
+  .pnl-row.total .pnl-label { color: var(--text); font-weight: 700; }
+  .pnl-row.total .pnl-val { font-size: 1.1rem; }
+  .neg { color: var(--red); }
+  .pos { color: var(--green); }
+  .scenario-tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+  .scenario-tabs button { background: var(--bg); border: 1px solid var(--border); color: var(--muted); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
+  .scenario-tabs button.active { border-color: var(--accent); color: var(--accent); }
+  .timeline { position: relative; padding-left: 20px; }
+  .timeline::before { content: ''; position: absolute; left: 6px; top: 0; bottom: 0; width: 2px; background: var(--border); }
+  .milestone { position: relative; margin-bottom: 14px; }
+  .milestone::before { content: ''; position: absolute; left: -18px; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--border); }
+  .milestone.done::before { background: var(--green); }
+  .milestone.current::before { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  .milestone .m-title { font-size: 0.9rem; font-weight: 600; }
+  .milestone .m-sub { font-size: 0.75rem; color: var(--muted); }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; }
+  .tag.on { background: #22c55e22; color: var(--green); }
+  .tag.risk { background: #ef444422; color: var(--red); }
+  .tag.warn { background: #eab30822; color: var(--yellow); }
+  .note { font-size: 0.75rem; color: var(--muted); margin-top: 8px; font-style: italic; }
+  .slider-row { padding: 6px 0; }
+  .slider-row label { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
+  .slider-row input[type=range] { width: 100%; accent-color: var(--accent); }
+  .divider { height: 1px; background: var(--border); margin: 8px 0; }
+  @media (max-width: 700px) {
+    .grid { grid-template-columns: 1fr; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<h1>🎯 Quit W2 by 30</h1>
+<p class="subtitle">Kenny Xu — Target: $500K/yr from non-W2 streams by April 2028</p>
+
+<div class="grid">
+
+  <!-- Income Inputs -->
+  <div class="card">
+    <h2>💰 Income Inputs</h2>
+    <div class="row"><label>Snapchat W2 (monthly gross)</label><input type="number" id="snap" value="16667"></div>
+    <div class="row"><label>Rover Monthly Revenue</label><input type="number" id="rover-rev" value="80000"></div>
+    <div class="row"><label>Lunouri Monthly Profit</label><input type="number" id="lunouri" value="1500"></div>
+    <div class="row"><label>Other Income (monthly)</label><input type="number" id="other" value="0"></div>
+    <div class="divider"></div>
+    <div class="slider-row">
+      <label><span>Rover Net Margin %</span><span id="margin-label">15.0%</span></label>
+      <input type="range" id="net-margin" min="5" max="40" step="0.5" value="15">
+    </div>
+    <p class="note">Net margin = what you actually keep after all costs, expenses, and sales tax. Default 15% is a conservative planning assumption.</p>
+  </div>
+
+  <!-- Rover Quick P&L -->
+  <div class="card">
+    <h2>📋 Rover Monthly Snapshot</h2>
+    <div class="pnl-row"><span class="pnl-label">Revenue</span><span class="pnl-val" id="pnl-rev">$0</span></div>
+    <div class="pnl-row"><span class="pnl-label">All-in Costs & Expenses</span><span class="pnl-val neg" id="pnl-costs">$0</span></div>
+    <div class="pnl-row total"><span class="pnl-label">🏦 Net Earnings (Owner Draw)</span><span class="pnl-val pos" id="pnl-net">$0</span></div>
+    <div class="pnl-row"><span class="pnl-label">Net Earnings / year</span><span class="pnl-val" id="pnl-net-yr">$0</span></div>
+    <p class="note">Net = Revenue × net margin %. Adjust the slider to model different margin scenarios.</p>
+  </div>
+
+  <!-- Progress to $500K -->
+  <div class="card">
+    <h2>📊 Progress to $500K/yr</h2>
+    <div class="big-number" id="annual-income">$0</div>
+    <div style="color:var(--muted);margin:4px 0" id="annual-sub"></div>
+    <div class="progress-wrap">
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+      <div class="progress-label"><span id="pct-label">0%</span><span>$500,000</span></div>
+    </div>
+    <div class="stats-row" style="margin-top:16px">
+      <div class="stat"><div class="sval" id="gap">$0</div><div class="lbl">Annual Gap</div></div>
+      <div class="stat"><div class="sval" id="monthly-gap">$0</div><div class="lbl">Monthly Gap</div></div>
+      <div class="stat"><div class="sval" id="months-left">0</div><div class="lbl">Months to Apr '28</div></div>
+    </div>
+    <div class="stats-row" style="margin-top:8px">
+      <div class="stat"><div class="sval pos" id="rover-net-annual">$0</div><div class="lbl">Rover Net/yr</div></div>
+      <div class="stat"><div class="sval" style="color:var(--muted)" id="snap-annual">$0</div><div class="lbl">Snap W2 (not counted)</div></div>
+      <div class="stat"><div class="sval" id="other-annual">$0</div><div class="lbl">Lunouri+Other/yr</div></div>
+    </div>
+  </div>
+
+  <!-- Revenue Scenarios -->
+  <div class="card">
+    <h2>🚀 Revenue Scenario Comparison</h2>
+    <p style="font-size:0.8rem;color:var(--muted);margin-bottom:12px">How Rover revenue milestones change your total income at your current net margin.</p>
+    <div class="scenario-tabs">
+      <button class="active" onclick="setScenario(this,0)">Current</button>
+      <button onclick="setScenario(this,1)">$100K</button>
+      <button onclick="setScenario(this,2)">$120K</button>
+      <button onclick="setScenario(this,3)">$150K</button>
+      <button onclick="setScenario(this,4)">$200K</button>
+    </div>
+    <div class="pnl-row"><span class="pnl-label">Rover Revenue</span><span class="pnl-val" id="sc-rev">$0</span></div>
+    <div class="pnl-row"><span class="pnl-label">Net Earnings / mo</span><span class="pnl-val pos" id="sc-net">$0</span></div>
+    <div class="pnl-row"><span class="pnl-label">Net Earnings / yr</span><span class="pnl-val" id="sc-net-yr">$0</span></div>
+    <div class="pnl-row total"><span class="pnl-label">Total Annual (non-W2)</span><span class="pnl-val" id="sc-total">$0</span></div>
+    <div style="margin-top:8px"><span class="tag" id="sc-tag">—</span></div>
+  </div>
+
+  <!-- Quit Readiness -->
+  <div class="card">
+    <h2>✅ Quit Readiness Checklist</h2>
+    <div id="checklist"></div>
+    <p class="note">Green = on track. Yellow = needs work. Red = blocker.</p>
+  </div>
+
+  <!-- Timeline -->
+  <div class="card">
+    <h2>📅 Milestone Timeline</h2>
+    <div class="timeline" id="timeline"></div>
+  </div>
+
+  <!-- Levers -->
+  <div class="card full">
+    <h2>🎯 Biggest Levers (ranked by annual income impact)</h2>
+    <div id="levers"></div>
+    <p class="note">Shows how much each move adds to your annual take-home.</p>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const fmt = n => { const s = n < 0 ? '-' : ''; return s + '$' + Math.abs(Math.round(n)).toLocaleString(); };
+const TARGET = 500000;
+
+const inputIds = ['snap', 'rover-rev', 'lunouri', 'other', 'net-margin'];
+let currentScenario = 0;
+const scenarios = [null, 100000, 120000, 150000, 200000];
+
+function setScenario(btn, idx) {
+  document.querySelectorAll('.scenario-tabs button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentScenario = idx;
+  update();
+}
+
+function getVals() {
+  return {
+    snap: parseFloat($('snap').value) || 0,
+    roverRev: parseFloat($('rover-rev').value) || 0,
+    lunouri: parseFloat($('lunouri').value) || 0,
+    other: parseFloat($('other').value) || 0,
+    netMargin: (parseFloat($('net-margin').value) || 15) / 100,
+  };
+}
+
+function roverNet(rev, margin) { return rev * margin; }
+
+function update() {
+  const v = getVals();
+
+  // Slider label
+  $('margin-label').textContent = (v.netMargin * 100).toFixed(1) + '%';
+
+  // Rover P&L
+  const net = roverNet(v.roverRev, v.netMargin);
+  const costs = v.roverRev - net;
+  $('pnl-rev').textContent = fmt(v.roverRev);
+  $('pnl-costs').textContent = '-' + fmt(costs);
+  $('pnl-net').textContent = fmt(net);
+  $('pnl-net').className = 'pnl-val ' + (net >= 0 ? 'pos' : 'neg');
+  $('pnl-net-yr').textContent = fmt(net * 12);
+
+  // Annual — $500K target is NON-W2 only (excludes Snap)
+  const nonW2Monthly = net + v.lunouri + v.other;
+  const nonW2Annual = nonW2Monthly * 12;
+  const totalMonthly = v.snap + nonW2Monthly;
+  const totalAnnual = totalMonthly * 12;
+  const pct = Math.min(100, (nonW2Annual / TARGET) * 100);
+  const gap = Math.max(0, TARGET - nonW2Annual);
+
+  $('annual-income').textContent = fmt(nonW2Annual);
+  $('annual-sub').textContent = `${fmt(nonW2Monthly)}/mo non-W2 — Rover ${fmt(net)} + Lunouri ${fmt(v.lunouri)}` + (v.other ? ` + Other ${fmt(v.other)}` : '') + ` (+ Snap ${fmt(v.snap)} W2)`;
+  $('progress-fill').style.width = pct + '%';
+  $('progress-fill').style.background = pct >= 100 ? 'var(--green)' : pct >= 70 ? 'var(--yellow)' : 'var(--accent)';
+  $('pct-label').textContent = pct.toFixed(1) + '%';
+  $('gap').textContent = fmt(gap);
+  $('gap').style.color = gap === 0 ? 'var(--green)' : 'var(--red)';
+  $('monthly-gap').textContent = fmt(gap / 12);
+
+  const now = new Date();
+  const target = new Date(2028, 3, 2);
+  const months = Math.max(0, (target.getFullYear() - now.getFullYear()) * 12 + (target.getMonth() - now.getMonth()));
+  $('months-left').textContent = months;
+
+  $('rover-net-annual').textContent = fmt(net * 12);
+  $('snap-annual').textContent = fmt(v.snap * 12);
+  $('other-annual').textContent = fmt((v.lunouri + v.other) * 12);
+
+  const annual = nonW2Annual; // for checklist/timeline references
+
+  // Scenarios
+  const scRev = scenarios[currentScenario] || v.roverRev;
+  const scNet = roverNet(scRev, v.netMargin);
+  const scAnnual = (scNet + v.lunouri + v.other) * 12;
+  $('sc-rev').textContent = fmt(scRev);
+  $('sc-net').textContent = fmt(scNet);
+  $('sc-net-yr').textContent = fmt(scNet * 12);
+  $('sc-total').textContent = fmt(scAnnual);
+
+  const scTag = $('sc-tag');
+  if (scAnnual >= TARGET) { scTag.textContent = '✅ QUIT READY'; scTag.className = 'tag on'; }
+  else if (scAnnual >= TARGET * 0.8) { scTag.textContent = '⚠️ CLOSE — ' + fmt(TARGET - scAnnual) + ' gap'; scTag.className = 'tag warn'; }
+  else { scTag.textContent = '🔴 NOT YET — ' + fmt(TARGET - scAnnual) + ' gap'; scTag.className = 'tag risk'; }
+
+  // Checklist
+  const checks = [
+    { label: `Non-W2 income ≥ $500K/yr (currently ${fmt(annual)})`, status: annual >= TARGET ? 'on' : annual >= TARGET*0.7 ? 'warn' : 'risk' },
+    { label: `Rover revenue ≥ $100K/mo (currently ${fmt(v.roverRev)})`, status: v.roverRev >= 100000 ? 'on' : v.roverRev >= 80000 ? 'warn' : 'risk' },
+    { label: `Rover net margin ≥ 20% (currently ${(v.netMargin*100).toFixed(1)}%)`, status: v.netMargin >= 0.20 ? 'on' : v.netMargin >= 0.15 ? 'warn' : 'risk' },
+    { label: `Lunouri profitable ≥ $3K/mo (currently ${fmt(v.lunouri)})`, status: v.lunouri >= 3000 ? 'on' : v.lunouri > 0 ? 'warn' : 'risk' },
+    { label: '6-month emergency fund ($50K+)', status: 'warn' },
+    { label: 'Rover runs without Kenny daily', status: 'warn' },
+    { label: 'Health insurance plan identified', status: 'risk' },
+  ];
+  $('checklist').innerHTML = checks.map(c =>
+    `<div class="row"><label>${c.label}</label><span class="tag ${c.status}">${c.status === 'on' ? 'On Track' : c.status === 'warn' ? 'Needs Work' : 'Blocker'}</span></div>`
+  ).join('');
+
+  // Timeline
+  const milestones = [
+    { title: 'Rover hits $80K/mo revenue', sub: 'Current baseline', done: v.roverRev >= 80000 },
+    { title: 'Rover hits $100K/mo revenue', sub: `Net: ~${fmt(roverNet(100000, v.netMargin))}/mo`, current: v.roverRev >= 80000 && v.roverRev < 100000 },
+    { title: 'Lunouri > $5K/mo profit', sub: 'Leggings shipment → 3PL → paid ads', current: v.lunouri >= 1000 && v.lunouri < 5000 },
+    { title: 'Combined income > $400K/yr', sub: '80% of quit target', done: annual >= 400000, current: annual >= 350000 && annual < 400000 },
+    { title: '$500K/yr sustained 3+ months', sub: 'Ready to quit with confidence', done: annual >= TARGET },
+    { title: '🎉 Quit Snapchat', sub: 'April 2028 — age 30' },
+  ];
+  $('timeline').innerHTML = milestones.map(m =>
+    `<div class="milestone ${m.done ? 'done' : m.current ? 'current' : ''}"><div class="m-title">${m.title}</div><div class="m-sub">${m.sub}</div></div>`
+  ).join('');
+
+  // Levers
+  const currentNetMonthly = net;
+  const levers = [
+    {
+      label: 'Grow Rover to $100K/mo',
+      impact: (roverNet(100000, v.netMargin) - currentNetMonthly) * 12,
+      note: `Net goes from ${fmt(currentNetMonthly)} to ${fmt(roverNet(100000, v.netMargin))}/mo`
+    },
+    {
+      label: 'Grow Rover to $150K/mo',
+      impact: (roverNet(150000, v.netMargin) - currentNetMonthly) * 12,
+      note: `Net goes from ${fmt(currentNetMonthly)} to ${fmt(roverNet(150000, v.netMargin))}/mo`
+    },
+    {
+      label: 'Improve net margin to 20%',
+      impact: (roverNet(v.roverRev, 0.20) - currentNetMonthly) * 12,
+      note: `Same revenue, 5pts better margin → +${fmt(v.roverRev * 0.05)}/mo`
+    },
+    {
+      label: 'Scale Lunouri to $5K/mo profit',
+      impact: (5000 - v.lunouri) * 12,
+      note: 'Leggings in transit, paid ads pipeline, AI creative'
+    },
+    {
+      label: 'Improve net margin to 25%',
+      impact: (roverNet(v.roverRev, 0.25) - currentNetMonthly) * 12,
+      note: `Better contractor rates, scheduling optimization, lower overhead`
+    },
+  ].filter(l => l.impact > 0).sort((a,b) => b.impact - a.impact);
+
+  $('levers').innerHTML = levers.map(l =>
+    `<div class="row"><label>${l.label}<br><span style="font-size:0.7rem">${l.note}</span></label><span class="val pos">+${fmt(l.impact)}/yr</span></div>`
+  ).join('');
+
+  save();
+}
+
+function save() {
+  const v = getVals();
+  localStorage.setItem('quit-w2-tracker-v3', JSON.stringify(v));
+}
+
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem('quit-w2-tracker-v3'));
+    if (s) {
+      if (s.snap !== undefined) $('snap').value = s.snap;
+      if (s.roverRev !== undefined) $('rover-rev').value = s.roverRev;
+      if (s.lunouri !== undefined) $('lunouri').value = s.lunouri;
+      if (s.other !== undefined) $('other').value = s.other;
+      if (s.netMargin !== undefined) $('net-margin').value = s.netMargin * 100;
+    }
+  } catch(e) {}
+}
+
+load();
+inputIds.forEach(id => $(id).addEventListener('input', update));
+update();
+</script>
+</body>
+</html>
