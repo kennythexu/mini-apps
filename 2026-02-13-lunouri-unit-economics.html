@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lunouri Unit Economics Calculator</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f0f0f;color:#e0e0e0;min-height:100vh;padding:20px}
+.container{max-width:900px;margin:0 auto}
+h1{font-size:1.6rem;margin-bottom:4px;color:#fff}
+.subtitle{color:#888;font-size:.85rem;margin-bottom:24px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+@media(max-width:600px){.grid{grid-template-columns:1fr}}
+.card{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:20px}
+.card h2{font-size:.95rem;color:#aaa;margin-bottom:16px;text-transform:uppercase;letter-spacing:.5px;font-weight:500}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:.8rem;color:#888;margin-bottom:4px}
+.field input,.field select{width:100%;padding:10px 12px;background:#111;border:1px solid #333;border-radius:8px;color:#fff;font-size:1rem}
+.field input:focus,.field select:focus{outline:none;border-color:#7c5cfc}
+.results{grid-column:1/-1}
+.results .card{background:#111;border-color:#7c5cfc30}
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px}
+.metric{text-align:center;padding:16px;background:#1a1a1a;border-radius:10px}
+.metric .value{font-size:1.8rem;font-weight:700;color:#fff;margin-bottom:2px}
+.metric .label{font-size:.75rem;color:#888;text-transform:uppercase;letter-spacing:.3px}
+.metric.good .value{color:#4ade80}
+.metric.warn .value{color:#fbbf24}
+.metric.bad .value{color:#f87171}
+.scenario-row{display:grid;grid-template-columns:1fr repeat(4,auto);gap:8px;padding:10px 0;border-bottom:1px solid #222;font-size:.85rem;align-items:center}
+.scenario-row.header{color:#888;font-weight:600;font-size:.75rem;text-transform:uppercase;border-bottom:2px solid #333}
+.scenario-row .good{color:#4ade80}.scenario-row .warn{color:#fbbf24}.scenario-row .bad{color:#f87171}
+.section-title{font-size:.85rem;color:#888;margin:20px 0 10px;text-transform:uppercase;letter-spacing:.5px;font-weight:500}
+.presets{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.presets button{padding:8px 16px;background:#222;border:1px solid #333;border-radius:8px;color:#ccc;cursor:pointer;font-size:.8rem;transition:all .15s}
+.presets button:hover,.presets button.active{background:#7c5cfc;border-color:#7c5cfc;color:#fff}
+.divider{height:1px;background:#2a2a2a;margin:8px 0 16px}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>💎 Lunouri Unit Economics</h1>
+<p class="subtitle">Product margin & ad spend breakeven calculator</p>
+
+<div class="presets">
+<button onclick="loadPreset('ss')" id="btn-ss">Super-Sculpt</button>
+<button onclick="loadPreset('jelly')" id="btn-jelly">Jelly Leggings</button>
+<button onclick="loadPreset('custom')" id="btn-custom">Custom</button>
+</div>
+
+<div class="grid">
+<div class="card">
+<h2>💰 Product Economics</h2>
+<div class="field"><label>Selling Price ($)</label><input type="number" id="price" step="0.01" oninput="calc()"></div>
+<div class="field"><label>COGS per Unit ($)</label><input type="number" id="cogs" step="0.01" oninput="calc()"></div>
+<div class="field"><label>Shipping Cost ($)</label><input type="number" id="shipping" value="0" step="0.01" oninput="calc()"></div>
+<div class="field"><label>Transaction Fee (%)</label><input type="number" id="txnPct" value="2.9" step="0.1" oninput="calc()"></div>
+<div class="field"><label>Transaction Fixed ($)</label><input type="number" id="txnFixed" value="0.30" step="0.01" oninput="calc()"></div>
+<div class="field"><label>Return Rate (%)</label><input type="number" id="returnRate" value="5" step="0.5" oninput="calc()"></div>
+</div>
+
+<div class="card">
+<h2>📣 Ad Spend Scenarios</h2>
+<div class="field"><label>Monthly Ad Budget ($)</label><input type="number" id="adBudget" value="3000" step="100" oninput="calc()"></div>
+<div class="field"><label>CPM ($) — Cost per 1K Impressions</label><input type="number" id="cpm" value="12" step="0.5" oninput="calc()"></div>
+<div class="field"><label>CTR (%) — Click-Through Rate</label><input type="number" id="ctr" value="1.5" step="0.1" oninput="calc()"></div>
+<div class="field"><label>CVR (%) — Landing Page Conversion</label><input type="number" id="cvr" value="2.5" step="0.1" oninput="calc()"></div>
+<div class="field"><label>AOV Multiplier (avg units/order)</label><input type="number" id="aov" value="1.0" step="0.1" oninput="calc()"></div>
+<div class="field"><label>Repeat Purchase Rate (%/mo)</label><input type="number" id="repeat" value="5" step="1" oninput="calc()"></div>
+</div>
+
+<div class="results">
+<div class="card">
+<h2>📊 Results</h2>
+<div class="metric-grid" id="metrics"></div>
+
+<div class="section-title">Breakeven Scenarios by CPA</div>
+<div id="scenarios"></div>
+
+<div class="section-title" style="margin-top:24px">Monthly Projection</div>
+<div class="metric-grid" id="monthly"></div>
+</div>
+</div>
+</div>
+</div>
+
+<script>
+const presets = {
+  ss: { price:51.26, cogs:14.72, shipping:0, label:'Super-Sculpt' },
+  jelly: { price:53.00, cogs:7.90, shipping:0, label:'Jelly Leggings' },
+  custom: { price:0, cogs:0, shipping:0, label:'Custom' }
+};
+let activePreset = null;
+
+function loadPreset(key) {
+  const p = presets[key];
+  document.getElementById('price').value = p.price || '';
+  document.getElementById('cogs').value = p.cogs || '';
+  document.getElementById('shipping').value = p.shipping;
+  document.querySelectorAll('.presets button').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-' + key).classList.add('active');
+  activePreset = key;
+  calc();
+}
+
+function v(id) { return parseFloat(document.getElementById(id).value) || 0; }
+
+function calc() {
+  const price = v('price'), cogs = v('cogs'), ship = v('shipping');
+  const txnPct = v('txnPct')/100, txnFixed = v('txnFixed');
+  const returnRate = v('returnRate')/100;
+  const adBudget = v('adBudget'), cpm = v('cpm'), ctr = v('ctr')/100, cvr = v('cvr')/100;
+  const aovMult = v('aov'), repeatRate = v('repeat')/100;
+
+  const txnFee = price * txnPct + txnFixed;
+  const costPerUnit = cogs + ship + txnFee;
+  const returnCost = price * returnRate;
+  const grossProfit = price - costPerUnit - returnCost;
+  const grossMargin = price > 0 ? (grossProfit / price * 100) : 0;
+  const breakEvenCPA = grossProfit;
+
+  // Ad funnel
+  const impressions = adBudget > 0 && cpm > 0 ? (adBudget / cpm) * 1000 : 0;
+  const clicks = impressions * ctr;
+  const orders = clicks * cvr;
+  const units = orders * aovMult;
+  const cpa = orders > 0 ? adBudget / orders : 0;
+  const roas = orders > 0 ? (orders * price) / adBudget : 0;
+  const breakEvenROAS = grossMargin > 0 ? 100 / grossMargin : 0;
+
+  // Monthly projection
+  const revenue = orders * price;
+  const totalCOGS = units * cogs;
+  const totalShip = units * ship;
+  const totalTxn = orders * txnFee;
+  const totalReturns = orders * returnCost;
+  const netProfit = revenue - totalCOGS - totalShip - totalTxn - totalReturns - adBudget;
+  const netMargin = revenue > 0 ? (netProfit / revenue * 100) : 0;
+
+  // LTV estimate (simple: 1 + months of repeat over 6mo horizon)
+  const ltv6mo = grossProfit * (1 + repeatRate * 6);
+
+  const tier = (val, good, bad) => val >= good ? 'good' : val >= bad ? 'warn' : 'bad';
+
+  document.getElementById('metrics').innerHTML = `
+    <div class="metric ${tier(grossMargin,50,30)}"><div class="value">${grossMargin.toFixed(1)}%</div><div class="label">Gross Margin</div></div>
+    <div class="metric"><div class="value">$${grossProfit.toFixed(2)}</div><div class="label">Profit/Unit</div></div>
+    <div class="metric ${tier(breakEvenCPA,20,10)}"><div class="value">$${breakEvenCPA.toFixed(2)}</div><div class="label">Breakeven CPA</div></div>
+    <div class="metric"><div class="value">${breakEvenROAS.toFixed(2)}x</div><div class="label">Breakeven ROAS</div></div>
+    <div class="metric ${cpa > 0 ? tier(breakEvenCPA - cpa, 5, 0) : ''}"><div class="value">${cpa > 0 ? '$'+cpa.toFixed(2) : '—'}</div><div class="label">Projected CPA</div></div>
+    <div class="metric"><div class="value">$${ltv6mo.toFixed(2)}</div><div class="label">6-Mo LTV</div></div>
+  `;
+
+  // CPA scenarios
+  const cpas = [5,10,15,20,25,30,40,50];
+  let scenHTML = `<div class="scenario-row header"><span>CPA</span><span>ROAS</span><span>Orders/Mo @$${(adBudget/1000).toFixed(0)}K</span><span>Net Profit</span><span>Verdict</span></div>`;
+  cpas.forEach(c => {
+    const o = adBudget > 0 ? Math.floor(adBudget / c) : 0;
+    const r = price / c;
+    const np = o * grossProfit - adBudget;
+    const cls = np > 0 ? 'good' : np > -500 ? 'warn' : 'bad';
+    const verdict = np > 0 ? '✅ Profitable' : np > -500 ? '⚠️ Tight' : '❌ Losing';
+    scenHTML += `<div class="scenario-row"><span>$${c}</span><span>${r.toFixed(2)}x</span><span>${o}</span><span class="${cls}">$${np.toFixed(0)}</span><span class="${cls}">${verdict}</span></div>`;
+  });
+  document.getElementById('scenarios').innerHTML = scenHTML;
+
+  document.getElementById('monthly').innerHTML = `
+    <div class="metric"><div class="value">$${revenue.toFixed(0)}</div><div class="label">Revenue</div></div>
+    <div class="metric"><div class="value">${Math.round(orders)}</div><div class="label">Orders</div></div>
+    <div class="metric ${tier(roas, breakEvenROAS+0.5, breakEvenROAS)}"><div class="value">${roas.toFixed(2)}x</div><div class="label">ROAS</div></div>
+    <div class="metric ${tier(netMargin,15,0)}"><div class="value">${netMargin.toFixed(1)}%</div><div class="label">Net Margin</div></div>
+    <div class="metric ${tier(netProfit,500,0)}"><div class="value">$${netProfit.toFixed(0)}</div><div class="label">Net Profit</div></div>
+    <div class="metric"><div class="value">${Math.round(clicks)}</div><div class="label">Clicks</div></div>
+  `;
+}
+
+loadPreset('ss');
+</script>
+</body>
+</html>
