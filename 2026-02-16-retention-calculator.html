@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rover Customer Retention & LTV Calculator</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;padding:20px}
+h1{text-align:center;font-size:1.6rem;margin-bottom:6px;color:#38bdf8}
+.subtitle{text-align:center;color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.container{max-width:900px;margin:0 auto}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px}
+@media(max-width:700px){.grid{grid-template-columns:1fr}}
+.card{background:#1e293b;border-radius:12px;padding:20px;border:1px solid #334155}
+.card h2{font-size:1rem;color:#38bdf8;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:.8rem;color:#94a3b8;margin-bottom:4px}
+.field input,.field select{width:100%;padding:8px 12px;background:#0f172a;border:1px solid #475569;border-radius:8px;color:#e2e8f0;font-size:.95rem}
+.field input:focus{outline:none;border-color:#38bdf8}
+.results{background:#1e293b;border-radius:12px;padding:24px;border:1px solid #334155;margin-bottom:24px}
+.results h2{font-size:1rem;color:#38bdf8;margin-bottom:16px}
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px}
+.metric{background:#0f172a;border-radius:10px;padding:16px;text-align:center}
+.metric .value{font-size:1.8rem;font-weight:700;color:#22c55e}
+.metric .value.warn{color:#f59e0b}
+.metric .value.bad{color:#ef4444}
+.metric .label{font-size:.75rem;color:#94a3b8;margin-top:4px}
+.chart-area{background:#1e293b;border-radius:12px;padding:24px;border:1px solid #334155;margin-bottom:24px}
+.chart-area h2{font-size:1rem;color:#38bdf8;margin-bottom:16px}
+canvas{width:100%;max-height:300px}
+.insight-box{background:#1e293b;border-radius:12px;padding:20px;border:1px solid #334155}
+.insight-box h2{font-size:1rem;color:#38bdf8;margin-bottom:12px}
+.insight{background:#0f172a;border-radius:8px;padding:12px 16px;margin-bottom:10px;font-size:.88rem;line-height:1.5;border-left:3px solid #38bdf8}
+.insight:last-child{margin-bottom:0}
+.insight strong{color:#f0f9ff}
+.tabs{display:flex;gap:8px;margin-bottom:20px;justify-content:center}
+.tab{padding:8px 18px;border-radius:8px;background:#1e293b;border:1px solid #334155;cursor:pointer;font-size:.85rem;color:#94a3b8;transition:.2s}
+.tab.active{background:#38bdf8;color:#0f172a;border-color:#38bdf8;font-weight:600}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>🔄 Customer Retention & LTV Calculator</h1>
+<p class="subtitle">See how retention rate impacts Rover's revenue and what you can spend to keep customers</p>
+
+<div class="tabs">
+<div class="tab active" onclick="setMode('recurring')">Recurring Customers</div>
+<div class="tab" onclick="setMode('compare')">Market Comparison</div>
+</div>
+
+<div id="recurring-mode">
+<div class="grid">
+<div class="card">
+<h2>📊 Customer Metrics</h2>
+<div class="field"><label>Active Recurring Customers</label><input type="number" id="customers" value="308" oninput="calc()"></div>
+<div class="field"><label>Avg Monthly Revenue per Customer</label><input type="number" id="avgRev" value="167" oninput="calc()"></div>
+<div class="field"><label>Avg Monthly COGS per Customer</label><input type="number" id="avgCogs" value="92" oninput="calc()"></div>
+<div class="field"><label>Monthly Churn Rate (%)</label><input type="number" id="churn" value="5" step="0.5" oninput="calc()"></div>
+</div>
+<div class="card">
+<h2>💰 Acquisition & Retention</h2>
+<div class="field"><label>Customer Acquisition Cost (CAC)</label><input type="number" id="cac" value="45" oninput="calc()"></div>
+<div class="field"><label>New Customers per Month</label><input type="number" id="newPerMonth" value="74" oninput="calc()"></div>
+<div class="field"><label>Frequency</label>
+<select id="freq" onchange="calc()">
+<option value="1" selected>Monthly</option>
+<option value="2">Biweekly</option>
+<option value="4">Weekly</option>
+</select>
+</div>
+<div class="field"><label>Target Monthly Revenue ($)</label><input type="number" id="targetRev" value="100000" oninput="calc()"></div>
+</div>
+</div>
+
+<div class="results">
+<h2>📈 Key Metrics</h2>
+<div class="metric-grid" id="metrics"></div>
+</div>
+
+<div class="chart-area">
+<h2>📉 Revenue Projection (12 Months) — Current vs Improved Retention</h2>
+<canvas id="chart"></canvas>
+</div>
+
+<div class="insight-box">
+<h2>💡 Insights</h2>
+<div id="insights"></div>
+</div>
+</div>
+
+<div id="compare-mode" style="display:none">
+<div class="card" style="margin-bottom:20px">
+<h2>🏙️ Market Comparison</h2>
+<p style="font-size:.85rem;color:#94a3b8;margin-bottom:16px">Enter metrics for each market to compare retention and LTV</p>
+<div style="overflow-x:auto">
+<table style="width:100%;border-collapse:collapse;font-size:.85rem">
+<thead><tr style="color:#94a3b8;text-align:left">
+<th style="padding:8px">Market</th>
+<th style="padding:8px">Customers</th>
+<th style="padding:8px">Avg Rev/Mo</th>
+<th style="padding:8px">Churn %</th>
+<th style="padding:8px">Avg Lifespan</th>
+<th style="padding:8px">LTV</th>
+<th style="padding:8px">Monthly Rev</th>
+</tr></thead>
+<tbody id="marketTable"></tbody>
+</table>
+</div>
+</div>
+<div class="card">
+<h2>➕ Add/Edit Markets</h2>
+<div class="grid" style="grid-template-columns:1fr 1fr 1fr 1fr auto;gap:8px;align-items:end">
+<div class="field"><label>Name</label><input id="mName" value="DFW" style="font-size:.8rem"></div>
+<div class="field"><label>Customers</label><input type="number" id="mCust" value="150" style="font-size:.8rem"></div>
+<div class="field"><label>Avg Rev</label><input type="number" id="mRev" value="210" style="font-size:.8rem"></div>
+<div class="field"><label>Churn %</label><input type="number" id="mChurn" value="7" step="0.5" style="font-size:.8rem"></div>
+<button onclick="addMarket()" style="padding:8px 16px;background:#38bdf8;color:#0f172a;border:none;border-radius:8px;cursor:pointer;font-weight:600;height:38px">Add</button>
+</div>
+</div>
+</div>
+</div>
+
+<script>
+let markets=[
+{name:'DFW',customers:150,avgRev:210,churn:7},
+{name:'Chicago',customers:25,avgRev:275,churn:10},
+{name:'Gainesville',customers:5,avgRev:190,churn:12}
+];
+
+function setMode(m){
+document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+event.target.classList.add('active');
+document.getElementById('recurring-mode').style.display=m==='recurring'?'block':'none';
+document.getElementById('compare-mode').style.display=m==='compare'?'block':'none';
+if(m==='compare')renderMarkets();
+}
+
+function addMarket(){
+markets.push({name:document.getElementById('mName').value,customers:+document.getElementById('mCust').value,avgRev:+document.getElementById('mRev').value,churn:+document.getElementById('mChurn').value});
+renderMarkets();
+}
+
+function renderMarkets(){
+const tb=document.getElementById('marketTable');
+tb.innerHTML=markets.map((m,i)=>{
+const lifespan=1/(m.churn/100);
+const ltv=m.avgRev*lifespan;
+const moRev=m.customers*m.avgRev;
+return `<tr style="border-top:1px solid #334155">
+<td style="padding:8px;font-weight:600">${m.name} <span style="cursor:pointer;color:#ef4444;font-size:.7rem" onclick="markets.splice(${i},1);renderMarkets()">✕</span></td>
+<td style="padding:8px">${m.customers}</td>
+<td style="padding:8px">$${m.avgRev}</td>
+<td style="padding:8px">${m.churn}%</td>
+<td style="padding:8px;color:#38bdf8;font-weight:600">${lifespan.toFixed(1)} mo</td>
+<td style="padding:8px;color:#22c55e;font-weight:600">$${ltv.toFixed(0)}</td>
+<td style="padding:8px">$${moRev.toLocaleString()}</td>
+</tr>`;
+}).join('');
+}
+
+function fmt(n){return'$'+Math.round(n).toLocaleString()}
+
+function calc(){
+const customers=+document.getElementById('customers').value;
+const avgRev=+document.getElementById('avgRev').value;
+const avgCogs=+document.getElementById('avgCogs').value;
+const churn=+document.getElementById('churn').value/100;
+const cac=+document.getElementById('cac').value;
+const newPM=+document.getElementById('newPerMonth').value;
+const targetRev=+document.getElementById('targetRev').value;
+
+const gp=avgRev-avgCogs;
+const margin=avgRev?gp/avgRev:0;
+const lifespan=churn?1/churn:999;
+const ltv=avgRev*lifespan;
+const ltvProfit=gp*lifespan;
+const ltvCacRatio=cac?ltvProfit/cac:0;
+const monthlyRev=customers*avgRev;
+const monthlyGP=customers*gp;
+const monthsToTarget=targetRev>monthlyRev&&newPM>0?Math.ceil((targetRev/avgRev-customers)/(newPM-churn*customers>0?newPM-churn*customers:newPM)):monthlyRev>=targetRev?0:999;
+
+// Max spend to retain: if keeping a customer saves their remaining LTV profit
+const maxRetentionSpend=gp*3; // ~3 months of profit is a reasonable retention budget
+
+const metricsHTML=[
+{v:fmt(ltv),l:'Customer Lifetime Value',c:''},
+{v:fmt(ltvProfit),l:'Lifetime Gross Profit',c:ltvProfit<cac*2?'warn':''},
+{v:lifespan.toFixed(1)+' mo',l:'Avg Customer Lifespan',c:lifespan<10?'warn':''},
+{v:ltvCacRatio.toFixed(1)+'x',l:'LTV:CAC Ratio',c:ltvCacRatio<3?'warn':''},
+{v:fmt(monthlyRev),l:'Current Monthly Revenue',c:monthlyRev<targetRev?'warn':''},
+{v:fmt(maxRetentionSpend),l:'Max Retention Spend/Customer',c:''},
+{v:Math.round(customers*churn),l:'Customers Lost/Month',c:customers*churn>newPM?'bad':''},
+{v:monthsToTarget===0?'✅ Hit!':monthsToTarget>24?'24+ mo':monthsToTarget+' mo',l:'Months to '+fmt(targetRev)+'/mo',c:monthsToTarget>12?'warn':monthsToTarget===0?'':''}
+].map(m=>`<div class="metric"><div class="value ${m.c}">${m.v}</div><div class="label">${m.l}</div></div>`).join('');
+document.getElementById('metrics').innerHTML=metricsHTML;
+
+// Chart: 12-month projection current vs improved retention (halved churn)
+drawChart(customers,avgRev,churn,newPM);
+
+// Insights
+const ins=[];
+const lostRev=Math.round(customers*churn)*avgRev;
+ins.push(`You're losing ~<strong>${Math.round(customers*churn)} customers/month</strong> (${fmt(lostRev)}/mo in revenue). Each 1% churn reduction saves ~${fmt(customers*0.01*avgRev*12)}/year.`);
+
+if(ltvCacRatio<3)ins.push(`⚠️ LTV:CAC ratio is <strong>${ltvCacRatio.toFixed(1)}x</strong> — healthy is 3x+. Either reduce CAC, increase prices, or improve retention.`);
+else ins.push(`✅ LTV:CAC ratio of <strong>${ltvCacRatio.toFixed(1)}x</strong> is healthy. You can afford to spend up to ${fmt(maxRetentionSpend)} to save an at-risk customer.`);
+
+if(churn>0.08)ins.push(`🔴 ${(churn*100).toFixed(0)}% monthly churn is high for recurring cleaning. Industry avg is 5-7%. Focus on first-clean experience and follow-up.`);
+else if(churn>0.05)ins.push(`🟡 ${(churn*100).toFixed(0)}% churn is average. Quick wins: post-clean survey, loyalty discounts at 6mo, proactive rebooking for skipped cleans.`);
+else ins.push(`🟢 ${(churn*100).toFixed(0)}% churn is excellent — your customers are sticky. Focus on growing new acquisition.`);
+
+const breakeven=newPM-customers*churn;
+if(breakeven<=0)ins.push(`🚨 <strong>Net negative growth!</strong> You're losing more customers (${Math.round(customers*churn)}/mo) than gaining (${newPM}/mo). Revenue will decline without fixing churn or boosting acquisition.`);
+else ins.push(`📈 Net growth: <strong>+${Math.round(breakeven)} customers/month</strong>. At this rate, ${fmt(targetRev)}/mo target in ~${monthsToTarget>24?'24+':monthsToTarget} months.`);
+
+document.getElementById('insights').innerHTML=ins.map(i=>`<div class="insight">${i}</div>`).join('');
+}
+
+function drawChart(customers,avgRev,churn,newPM){
+const canvas=document.getElementById('chart');
+const ctx=canvas.getContext('2d');
+const dpr=window.devicePixelRatio||1;
+canvas.width=canvas.offsetWidth*dpr;
+canvas.height=300*dpr;
+ctx.scale(dpr,dpr);
+const W=canvas.offsetWidth,H=300;
+ctx.clearRect(0,0,W,H);
+
+const months=12;
+const current=[],improved=[];
+let cCust=customers,iCust=customers;
+const improvedChurn=churn*0.5;
+
+for(let m=0;m<=months;m++){
+current.push(cCust*avgRev);
+improved.push(iCust*avgRev);
+cCust=cCust*(1-churn)+newPM;
+iCust=iCust*(1-improvedChurn)+newPM;
+}
+
+const allVals=[...current,...improved];
+const maxV=Math.max(...allVals)*1.1;
+const minV=Math.min(...allVals)*0.9;
+const pad={l:60,r:20,t:20,b:40};
+const cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
+
+const x=i=>pad.l+(i/months)*cW;
+const y=v=>pad.t+cH-(v-minV)/(maxV-minV)*cH;
+
+// Grid
+ctx.strokeStyle='#334155';ctx.lineWidth=1;
+for(let i=0;i<5;i++){
+const gy=pad.t+cH*i/4;
+ctx.beginPath();ctx.moveTo(pad.l,gy);ctx.lineTo(W-pad.r,gy);ctx.stroke();
+const val=maxV-(maxV-minV)*i/4;
+ctx.fillStyle='#64748b';ctx.font='11px sans-serif';ctx.textAlign='right';
+ctx.fillText('$'+(val/1000).toFixed(0)+'K',pad.l-8,gy+4);
+}
+for(let i=0;i<=months;i++){
+ctx.fillStyle='#64748b';ctx.font='11px sans-serif';ctx.textAlign='center';
+ctx.fillText('M'+i,x(i),H-pad.b+20);
+}
+
+// Lines
+function drawLine(data,color){
+ctx.strokeStyle=color;ctx.lineWidth=2.5;ctx.beginPath();
+data.forEach((v,i)=>{i===0?ctx.moveTo(x(i),y(v)):ctx.lineTo(x(i),y(v))});
+ctx.stroke();
+}
+drawLine(current,'#f59e0b');
+drawLine(improved,'#22c55e');
+
+// Legend
+ctx.font='12px sans-serif';
+ctx.fillStyle='#f59e0b';ctx.fillRect(W-200,10,14,14);ctx.fillStyle='#e2e8f0';ctx.textAlign='left';ctx.fillText('Current ('+Math.round(churn*100)+'% churn)',W-180,22);
+ctx.fillStyle='#22c55e';ctx.fillRect(W-200,30,14,14);ctx.fillStyle='#e2e8f0';ctx.fillText('Improved ('+Math.round(improvedChurn*100)+'% churn)',W-180,42);
+
+// End values
+ctx.font='bold 12px sans-serif';
+ctx.fillStyle='#f59e0b';ctx.textAlign='left';ctx.fillText(fmt(current[months]),x(months)+5,y(current[months]));
+ctx.fillStyle='#22c55e';ctx.fillText(fmt(improved[months]),x(months)+5,y(improved[months]));
+}
+
+calc();
+window.addEventListener('resize',calc);
+</script>
+</body>
+</html>
