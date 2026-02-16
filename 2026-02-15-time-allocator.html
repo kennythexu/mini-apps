@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weekly Time Allocator</title>
+<style>
+  :root { --bg: #0f0f0f; --card: #1a1a1a; --border: #2a2a2a; --text: #e0e0e0; --dim: #888; --accent: #6c63ff; --snap: #FFFC00; --rover: #22c55e; --lunouri: #f472b6; --personal: #60a5fa; --green: #22c55e; --red: #ef4444; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); padding: 20px; max-width: 1200px; margin: 0 auto; }
+  h1 { font-size: 1.6rem; margin-bottom: 4px; }
+  .subtitle { color: var(--dim); margin-bottom: 20px; font-size: 0.9rem; }
+  .week-nav { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .week-nav button { background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
+  .week-nav button:hover { border-color: var(--accent); }
+  .week-label { font-weight: 600; font-size: 1rem; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+  .card h2 { font-size: 1rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .dot-snap { background: var(--snap); }
+  .dot-rover { background: var(--rover); }
+  .dot-lunouri { background: var(--lunouri); }
+  .dot-personal { background: var(--personal); }
+  .day-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .day-label { width: 36px; font-size: 0.8rem; color: var(--dim); font-weight: 600; }
+  .day-input { width: 60px; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 5px 8px; border-radius: 5px; text-align: center; font-size: 0.85rem; }
+  .day-input:focus { outline: none; border-color: var(--accent); }
+  .total-row { display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid var(--border); margin-top: 4px; }
+  .total-hrs { font-size: 1.4rem; font-weight: 700; }
+  .target-input { width: 50px; background: var(--bg); border: 1px solid var(--border); color: var(--dim); padding: 4px 6px; border-radius: 5px; text-align: center; font-size: 0.8rem; }
+  .target-label { font-size: 0.75rem; color: var(--dim); }
+  .over { color: var(--green); }
+  .under { color: var(--red); }
+  .summary-card { grid-column: 1 / -1; }
+  .bar-container { margin-bottom: 12px; }
+  .bar-bg { height: 28px; background: var(--bg); border-radius: 6px; overflow: hidden; display: flex; }
+  .bar-seg { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 600; color: #000; min-width: 0; transition: width 0.3s; }
+  .bar-seg.snap { background: var(--snap); }
+  .bar-seg.rover { background: var(--rover); }
+  .bar-seg.lunouri { background: var(--lunouri); }
+  .bar-seg.personal { background: var(--personal); color: #fff; }
+  .stats-row { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 10px; }
+  .stat { text-align: center; }
+  .stat-val { font-size: 1.3rem; font-weight: 700; }
+  .stat-label { font-size: 0.75rem; color: var(--dim); }
+  .notes-area { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 10px; font-size: 0.85rem; min-height: 60px; resize: vertical; font-family: inherit; margin-top: 8px; }
+  .notes-area:focus { outline: none; border-color: var(--accent); }
+  .insight { background: #1e1b2e; border: 1px solid #2d2850; border-radius: 8px; padding: 12px; margin-top: 12px; font-size: 0.85rem; line-height: 1.5; }
+  .insight strong { color: var(--accent); }
+  .actions { display: flex; gap: 8px; margin-top: 12px; }
+  .actions button { background: var(--accent); border: none; color: #fff; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 600; }
+  .actions button.secondary { background: transparent; border: 1px solid var(--border); color: var(--dim); }
+  .actions button:hover { opacity: 0.85; }
+  .history-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.8rem; }
+  .history-table th, .history-table td { padding: 6px 8px; text-align: center; border-bottom: 1px solid var(--border); }
+  .history-table th { color: var(--dim); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<h1>⏱️ Weekly Time Allocator</h1>
+<p class="subtitle">Plan and track hours across Snapchat, Rover, Lunouri & personal time</p>
+
+<div class="week-nav">
+  <button onclick="changeWeek(-1)">← Prev</button>
+  <span class="week-label" id="weekLabel"></span>
+  <button onclick="changeWeek(1)">Next →</button>
+  <button onclick="goToCurrentWeek()" style="margin-left:auto">This Week</button>
+</div>
+
+<div class="grid">
+  <div class="card" id="card-snap">
+    <h2><span class="dot dot-snap"></span> Snapchat (W2)</h2>
+    <div id="inputs-snap"></div>
+    <div class="total-row">
+      <div><span class="total-hrs" id="total-snap">0</span> <span style="color:var(--dim);font-size:0.8rem">hrs</span></div>
+      <div><span class="target-label">Target: </span><input class="target-input" id="target-snap" value="40" onchange="saveData();render()"> hrs</div>
+    </div>
+  </div>
+
+  <div class="card" id="card-rover">
+    <h2><span class="dot dot-rover"></span> Rover Cleaners</h2>
+    <div id="inputs-rover"></div>
+    <div class="total-row">
+      <div><span class="total-hrs" id="total-rover">0</span> <span style="color:var(--dim);font-size:0.8rem">hrs</span></div>
+      <div><span class="target-label">Target: </span><input class="target-input" id="target-rover" value="15" onchange="saveData();render()"> hrs</div>
+    </div>
+  </div>
+
+  <div class="card" id="card-lunouri">
+    <h2><span class="dot dot-lunouri"></span> Lunouri</h2>
+    <div id="inputs-lunouri"></div>
+    <div class="total-row">
+      <div><span class="total-hrs" id="total-lunouri">0</span> <span style="color:var(--dim);font-size:0.8rem">hrs</span></div>
+      <div><span class="target-label">Target: </span><input class="target-input" id="target-lunouri" value="10" onchange="saveData();render()"> hrs</div>
+    </div>
+  </div>
+
+  <div class="card" id="card-personal">
+    <h2><span class="dot dot-personal"></span> Personal / Growth</h2>
+    <div id="inputs-personal"></div>
+    <div class="total-row">
+      <div><span class="total-hrs" id="total-personal">0</span> <span style="color:var(--dim);font-size:0.8rem">hrs</span></div>
+      <div><span class="target-label">Target: </span><input class="target-input" id="target-personal" value="10" onchange="saveData();render()"> hrs</div>
+    </div>
+  </div>
+
+  <div class="card summary-card">
+    <h2>📊 Week Summary</h2>
+    <div class="bar-container">
+      <div class="bar-bg" id="allocBar"></div>
+    </div>
+    <div class="stats-row" id="statsRow"></div>
+    <div class="insight" id="insight"></div>
+    <textarea class="notes-area" id="weekNotes" placeholder="Weekly notes, priorities, reflections..." oninput="saveData()"></textarea>
+    <div class="actions">
+      <button onclick="exportWeek()">📋 Copy Summary</button>
+      <button class="secondary" onclick="clearWeek()">Clear Week</button>
+    </div>
+  </div>
+
+  <div class="card summary-card">
+    <h2>📈 Recent Weeks</h2>
+    <table class="history-table" id="historyTable">
+      <thead><tr><th>Week</th><th style="color:var(--snap)">Snap</th><th style="color:var(--rover)">Rover</th><th style="color:var(--lunouri)">Lunouri</th><th style="color:var(--personal)">Personal</th><th>Total</th></tr></thead>
+      <tbody id="historyBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const CATS = ['snap','rover','lunouri','personal'];
+const CAT_LABELS = {snap:'Snap',rover:'Rover',lunouri:'Lunouri',personal:'Personal'};
+const STORAGE_KEY = 'timeAllocator';
+
+let currentWeekStart = getWeekStart(new Date());
+
+function getWeekStart(d) {
+  const dt = new Date(d);
+  const day = dt.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  dt.setDate(dt.getDate() + diff);
+  dt.setHours(0,0,0,0);
+  return dt;
+}
+
+function weekKey(d) {
+  return d.toISOString().slice(0,10);
+}
+
+function formatWeek(d) {
+  const end = new Date(d);
+  end.setDate(end.getDate() + 6);
+  const opts = {month:'short',day:'numeric'};
+  return `${d.toLocaleDateString('en-US',opts)} – ${end.toLocaleDateString('en-US',opts)}, ${end.getFullYear()}`;
+}
+
+function getAllData() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; }
+}
+
+function getWeekData() {
+  const all = getAllData();
+  const key = weekKey(currentWeekStart);
+  if (!all[key]) all[key] = { hours: {}, targets: {snap:40,rover:15,lunouri:10,personal:10}, notes: '' };
+  CATS.forEach(c => { if(!all[key].hours[c]) all[key].hours[c] = [0,0,0,0,0,0,0]; });
+  return all[key];
+}
+
+function saveData() {
+  const all = getAllData();
+  const key = weekKey(currentWeekStart);
+  const wd = getWeekData();
+  CATS.forEach(c => {
+    wd.targets[c] = parseFloat(document.getElementById(`target-${c}`).value) || 0;
+    DAYS.forEach((_, i) => {
+      const inp = document.querySelector(`#inputs-${c} [data-day="${i}"]`);
+      if (inp) wd.hours[c][i] = parseFloat(inp.value) || 0;
+    });
+  });
+  wd.notes = document.getElementById('weekNotes').value;
+  all[key] = wd;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+}
+
+function buildInputs() {
+  const wd = getWeekData();
+  CATS.forEach(c => {
+    const container = document.getElementById(`inputs-${c}`);
+    container.innerHTML = '';
+    DAYS.forEach((d, i) => {
+      const row = document.createElement('div');
+      row.className = 'day-row';
+      row.innerHTML = `<span class="day-label">${d}</span><input class="day-input" type="number" min="0" max="24" step="0.5" data-day="${i}" value="${wd.hours[c][i] || ''}" oninput="saveData();render()">`;
+      container.appendChild(row);
+    });
+    document.getElementById(`target-${c}`).value = wd.targets[c];
+  });
+  document.getElementById('weekNotes').value = wd.notes || '';
+}
+
+function render() {
+  const wd = getWeekData();
+  document.getElementById('weekLabel').textContent = formatWeek(currentWeekStart);
+
+  const totals = {};
+  let grandTotal = 0;
+  CATS.forEach(c => {
+    totals[c] = wd.hours[c].reduce((a,b) => a+b, 0);
+    grandTotal += totals[c];
+    const el = document.getElementById(`total-${c}`);
+    el.textContent = totals[c];
+    const target = wd.targets[c];
+    el.className = 'total-hrs ' + (totals[c] >= target ? 'over' : (totals[c] > 0 ? 'under' : ''));
+  });
+
+  // Bar
+  const bar = document.getElementById('allocBar');
+  bar.innerHTML = '';
+  if (grandTotal > 0) {
+    CATS.forEach(c => {
+      const pct = (totals[c] / grandTotal * 100);
+      if (pct > 0) {
+        const seg = document.createElement('div');
+        seg.className = `bar-seg ${c}`;
+        seg.style.width = pct + '%';
+        if (pct > 8) seg.textContent = `${CAT_LABELS[c]} ${Math.round(pct)}%`;
+        bar.appendChild(seg);
+      }
+    });
+  }
+
+  // Stats
+  const targetTotal = CATS.reduce((s,c) => s + wd.targets[c], 0);
+  const nonW2 = totals.rover + totals.lunouri;
+  const statsRow = document.getElementById('statsRow');
+  statsRow.innerHTML = `
+    <div class="stat"><div class="stat-val">${grandTotal}h</div><div class="stat-label">Total</div></div>
+    <div class="stat"><div class="stat-val">${targetTotal}h</div><div class="stat-label">Target</div></div>
+    <div class="stat"><div class="stat-val">${nonW2}h</div><div class="stat-label">Non-W2</div></div>
+    <div class="stat"><div class="stat-val">${grandTotal > 0 ? Math.round(nonW2/grandTotal*100) : 0}%</div><div class="stat-label">Biz Focus</div></div>
+    <div class="stat"><div class="stat-val">${168 - grandTotal}h</div><div class="stat-label">Free Time</div></div>
+  `;
+
+  // Insight
+  const insight = document.getElementById('insight');
+  let tips = [];
+  if (grandTotal === 0) {
+    tips.push("Start logging hours to see insights.");
+  } else {
+    if (nonW2 < 20) tips.push(`<strong>⚠️ Only ${nonW2}h on businesses this week.</strong> To hit $500K non-W2, you need consistent side-hustle hours.`);
+    if (totals.lunouri < 5) tips.push(`Lunouri got only ${totals.lunouri}h — early-stage brands need momentum.`);
+    if (totals.rover > totals.snap && totals.rover > 20) tips.push(`<strong>💪 Rover got more hours than Snap this week.</strong> That's the energy of someone building an exit.`);
+    if (grandTotal > 80) tips.push(`<strong>🔥 ${grandTotal}h logged.</strong> Watch burnout — sustainable pace wins.`);
+    const roverPct = Math.round(totals.rover/grandTotal*100);
+    if (roverPct > 40) tips.push(`Rover = ${roverPct}% of your week. Make sure those hours are strategic (systems, not firefighting).`);
+    if (tips.length === 0) tips.push("Solid week planned. Stay focused on high-leverage activities.");
+  }
+  insight.innerHTML = tips.join('<br>');
+
+  // History
+  const all = getAllData();
+  const keys = Object.keys(all).sort().reverse().slice(0, 8);
+  const tbody = document.getElementById('historyBody');
+  tbody.innerHTML = '';
+  keys.forEach(k => {
+    const w = all[k];
+    if (!w.hours) return;
+    const t = {};
+    let gt = 0;
+    CATS.forEach(c => { t[c] = (w.hours[c]||[]).reduce((a,b)=>a+b,0); gt += t[c]; });
+    if (gt === 0) return;
+    const ws = new Date(k);
+    const label = ws.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    const active = k === weekKey(currentWeekStart) ? ' style="color:var(--accent);font-weight:600"' : '';
+    tbody.innerHTML += `<tr${active}><td>${label}</td><td>${t.snap}</td><td>${t.rover}</td><td>${t.lunouri}</td><td>${t.personal}</td><td><strong>${gt}</strong></td></tr>`;
+  });
+}
+
+function changeWeek(dir) {
+  currentWeekStart.setDate(currentWeekStart.getDate() + dir * 7);
+  buildInputs();
+  render();
+}
+
+function goToCurrentWeek() {
+  currentWeekStart = getWeekStart(new Date());
+  buildInputs();
+  render();
+}
+
+function clearWeek() {
+  if (!confirm('Clear all hours for this week?')) return;
+  const all = getAllData();
+  delete all[weekKey(currentWeekStart)];
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+  buildInputs();
+  render();
+}
+
+function exportWeek() {
+  const wd = getWeekData();
+  const totals = {};
+  let gt = 0;
+  CATS.forEach(c => { totals[c] = wd.hours[c].reduce((a,b)=>a+b,0); gt += totals[c]; });
+  const lines = [
+    `⏱️ Week of ${formatWeek(currentWeekStart)}`,
+    `Snapchat: ${totals.snap}h / ${wd.targets.snap}h`,
+    `Rover: ${totals.rover}h / ${wd.targets.rover}h`,
+    `Lunouri: ${totals.lunouri}h / ${wd.targets.lunouri}h`,
+    `Personal: ${totals.personal}h / ${wd.targets.personal}h`,
+    `Total: ${gt}h | Non-W2: ${totals.rover+totals.lunouri}h (${gt>0?Math.round((totals.rover+totals.lunouri)/gt*100):0}%)`,
+  ];
+  if (wd.notes) lines.push(`\nNotes: ${wd.notes}`);
+  navigator.clipboard.writeText(lines.join('\n')).then(() => alert('Copied!'));
+}
+
+buildInputs();
+render();
+</script>
+</body>
+</html>
