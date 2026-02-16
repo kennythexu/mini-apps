@@ -53,22 +53,17 @@ canvas{width:100%;max-height:300px}
 <div class="grid">
 <div class="card">
 <h2>📊 Customer Metrics</h2>
+<div class="field"><label>Monthly Revenue ($)</label><input type="number" id="monthlyRevInput" value="71509" oninput="calc()"></div>
+<div class="field"><label>Monthly Bookings</label><input type="number" id="monthlyBookings" value="395" oninput="calc()"></div>
 <div class="field"><label>Active Recurring Customers</label><input type="number" id="customers" value="308" oninput="calc()"></div>
-<div class="field"><label>Avg Monthly Revenue per Customer</label><input type="number" id="avgRev" value="167" oninput="calc()"></div>
-<div class="field"><label>Avg Monthly COGS per Customer</label><input type="number" id="avgCogs" value="92" oninput="calc()"></div>
+<div class="field"><label>Gross Margin (%)</label><input type="number" id="grossMargin" value="45" step="1" oninput="calc()"></div>
 <div class="field"><label>Monthly Churn Rate (%)</label><input type="number" id="churn" value="5" step="0.5" oninput="calc()"></div>
 </div>
 <div class="card">
 <h2>💰 Acquisition & Retention</h2>
 <div class="field"><label>Customer Acquisition Cost (CAC)</label><input type="number" id="cac" value="45" oninput="calc()"></div>
 <div class="field"><label>New Customers per Month</label><input type="number" id="newPerMonth" value="74" oninput="calc()"></div>
-<div class="field"><label>Frequency</label>
-<select id="freq" onchange="calc()">
-<option value="1" selected>Monthly</option>
-<option value="2">Biweekly</option>
-<option value="4">Weekly</option>
-</select>
-</div>
+<!-- frequency removed -->
 <div class="field"><label>Target Monthly Revenue ($)</label><input type="number" id="targetRev" value="100000" oninput="calc()"></div>
 </div>
 </div>
@@ -162,26 +157,27 @@ return `<tr style="border-top:1px solid #334155">
 function fmt(n){return'$'+Math.round(n).toLocaleString()}
 
 function calc(){
+const monthlyRev=+document.getElementById('monthlyRevInput').value;
+const monthlyBookings=+document.getElementById('monthlyBookings').value;
 const customers=+document.getElementById('customers').value;
-const avgRev=+document.getElementById('avgRev').value;
-const avgCogs=+document.getElementById('avgCogs').value;
+const grossMarginPct=+document.getElementById('grossMargin').value/100;
 const churn=+document.getElementById('churn').value/100;
 const cac=+document.getElementById('cac').value;
 const newPM=+document.getElementById('newPerMonth').value;
 const targetRev=+document.getElementById('targetRev').value;
 
-const gp=avgRev-avgCogs;
-const margin=avgRev?gp/avgRev:0;
+// Derived: avg revenue per customer per month (not per booking)
+const avgRev=customers?monthlyRev/customers:0;
+const gp=avgRev*grossMarginPct;
 const lifespan=churn?1/churn:999;
 const ltv=avgRev*lifespan;
 const ltvProfit=gp*lifespan;
 const ltvCacRatio=cac?ltvProfit/cac:0;
-const monthlyRev=customers*avgRev;
-const monthlyGP=customers*gp;
+const monthlyGP=monthlyRev*grossMarginPct;
 const monthsToTarget=targetRev>monthlyRev&&newPM>0?Math.ceil((targetRev/avgRev-customers)/(newPM-churn*customers>0?newPM-churn*customers:newPM)):monthlyRev>=targetRev?0:999;
 
-// Max spend to retain: if keeping a customer saves their remaining LTV profit
-const maxRetentionSpend=gp*3; // ~3 months of profit is a reasonable retention budget
+// Max spend to retain: ~3 months of profit per customer
+const maxRetentionSpend=gp*3;
 
 const metricsHTML=[
 {v:fmt(ltv),l:'Customer Lifetime Value',c:''},
