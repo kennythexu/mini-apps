@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weekly Business Scorecard</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e4e4e7; min-height: 100vh; padding: 20px; }
+.header { text-align: center; margin-bottom: 24px; }
+.header h1 { font-size: 1.6rem; font-weight: 700; }
+.header .week { color: #71717a; font-size: 0.9rem; margin-top: 4px; }
+.week-nav { display: flex; justify-content: center; gap: 12px; margin-bottom: 20px; }
+.week-nav button { background: #1e1e2e; border: 1px solid #27272a; color: #a1a1aa; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
+.week-nav button:hover { background: #27272a; color: #fff; }
+.biz-section { margin-bottom: 28px; }
+.biz-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.biz-title .dot { width: 10px; height: 10px; border-radius: 50%; }
+.rover .dot { background: #22c55e; }
+.lunouri .dot { background: #a78bfa; }
+.personal .dot { background: #facc15; }
+.metrics-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.metric-card { background: #1a1a2e; border: 1px solid #27272a; border-radius: 10px; padding: 14px; }
+.metric-card label { font-size: 0.75rem; color: #71717a; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px; }
+.metric-card input { width: 100%; background: #0f1117; border: 1px solid #3f3f46; border-radius: 6px; padding: 8px 10px; color: #fff; font-size: 1.1rem; font-weight: 600; }
+.metric-card input:focus { outline: none; border-color: #6366f1; }
+.metric-card .target { font-size: 0.7rem; color: #52525b; margin-top: 4px; }
+.metric-card .status { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-left: 4px; vertical-align: middle; }
+.status.green { background: #22c55e; }
+.status.yellow { background: #facc15; }
+.status.red { background: #ef4444; }
+.summary { background: #1a1a2e; border: 1px solid #27272a; border-radius: 10px; padding: 18px; margin-top: 20px; }
+.summary h3 { font-size: 0.95rem; margin-bottom: 12px; }
+.score-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.score-bar .label { width: 100px; font-size: 0.8rem; color: #a1a1aa; }
+.score-bar .bar-bg { flex: 1; height: 8px; background: #27272a; border-radius: 4px; overflow: hidden; }
+.score-bar .bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+.score-bar .pct { width: 40px; text-align: right; font-size: 0.8rem; font-weight: 600; }
+.notes-section { margin-top: 20px; }
+.notes-section textarea { width: 100%; background: #0f1117; border: 1px solid #3f3f46; border-radius: 8px; padding: 12px; color: #e4e4e7; font-family: inherit; font-size: 0.9rem; min-height: 80px; resize: vertical; }
+.notes-section textarea:focus { outline: none; border-color: #6366f1; }
+.notes-section label { font-size: 0.8rem; color: #71717a; margin-bottom: 6px; display: block; }
+.export-row { display: flex; gap: 10px; margin-top: 16px; justify-content: center; }
+.export-row button { background: #6366f1; border: none; color: #fff; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
+.export-row button:hover { background: #4f46e5; }
+.export-row button.secondary { background: #27272a; }
+.export-row button.secondary:hover { background: #3f3f46; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📊 Weekly Business Scorecard</h1>
+  <div class="week" id="weekLabel">Week of Feb 17, 2026</div>
+</div>
+
+<div class="week-nav">
+  <button onclick="changeWeek(-1)">← Prev Week</button>
+  <button onclick="changeWeek(0)">This Week</button>
+  <button onclick="changeWeek(1)">Next Week →</button>
+</div>
+
+<div class="biz-section rover">
+  <div class="biz-title"><span class="dot"></span> Rover Cleaners</div>
+  <div class="metrics-grid" id="roverMetrics"></div>
+</div>
+
+<div class="biz-section lunouri">
+  <div class="biz-title"><span class="dot"></span> Lunouri</div>
+  <div class="metrics-grid" id="lunouriMetrics"></div>
+</div>
+
+<div class="biz-section personal">
+  <div class="biz-title"><span class="dot"></span> Personal / W2</div>
+  <div class="metrics-grid" id="personalMetrics"></div>
+</div>
+
+<div class="summary">
+  <h3>🎯 Goal Attainment</h3>
+  <div id="scoreBars"></div>
+</div>
+
+<div class="notes-section">
+  <label>Weekly Notes / Wins / Blockers</label>
+  <textarea id="weekNotes" placeholder="What went well? What's stuck? Key decisions?"></textarea>
+</div>
+
+<div class="export-row">
+  <button onclick="copyMarkdown()">📋 Copy as Markdown</button>
+  <button class="secondary" onclick="exportHistory()">📥 Export All Weeks</button>
+</div>
+
+<script>
+const METRICS = {
+  rover: [
+    { id: 'r_revenue', label: 'Revenue', target: 20000, prefix: '$', desc: 'Weekly target: $20K' },
+    { id: 'r_bookings', label: 'New Bookings', target: 25, desc: 'Target: 25/wk' },
+    { id: 'r_leads', label: 'New Leads', target: 40, desc: 'Target: 40/wk' },
+    { id: 'r_margin', label: 'Gross Margin %', target: 50, suffix: '%', desc: 'Target: 50%' },
+    { id: 'r_contractors', label: 'Active Contractors', target: 25, desc: 'Target: 25' },
+    { id: 'r_recleans', label: 'Recleans', target: 2, invert: true, desc: 'Target: ≤2/wk' },
+  ],
+  lunouri: [
+    { id: 'l_revenue', label: 'Revenue', target: 5000, prefix: '$', desc: 'Weekly target: $5K' },
+    { id: 'l_orders', label: 'Orders', target: 80, desc: 'Target: 80/wk' },
+    { id: 'l_adspend', label: 'Ad Spend', prefix: '$', desc: 'Track weekly' },
+    { id: 'l_roas', label: 'ROAS', target: 2.0, suffix: 'x', desc: 'Target: 2.0x' },
+    { id: 'l_aov', label: 'AOV', prefix: '$', target: 52, desc: 'Target: $52' },
+  ],
+  personal: [
+    { id: 'p_snap_pipeline', label: 'Snap Pipeline $', prefix: '$', desc: 'Active pipeline value' },
+    { id: 'p_snap_closed', label: 'Snap Closed $', prefix: '$', desc: 'Closed this week' },
+    { id: 'p_hours_biz', label: 'Hours on Biz', target: 15, desc: 'Target: 15h on own biz' },
+    { id: 'p_savings_rate', label: 'Savings Rate %', suffix: '%', desc: 'Track monthly' },
+  ]
+};
+
+let currentWeekOffset = 0;
+
+function getWeekKey(offset) {
+  const d = new Date();
+  d.setDate(d.getDate() - d.getDay() + 1 + (offset * 7)); // Monday
+  return d.toISOString().slice(0, 10);
+}
+
+function getWeekLabel(offset) {
+  const d = new Date();
+  d.setDate(d.getDate() - d.getDay() + 1 + (offset * 7));
+  return 'Week of ' + d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function loadData() {
+  const key = 'scorecard_' + getWeekKey(currentWeekOffset);
+  return JSON.parse(localStorage.getItem(key) || '{}');
+}
+
+function saveData(data) {
+  const key = 'scorecard_' + getWeekKey(currentWeekOffset);
+  localStorage.setItem(key, JSON.stringify(data));
+}
+
+function renderMetrics(section, containerId) {
+  const container = document.getElementById(containerId);
+  const data = loadData();
+  container.innerHTML = '';
+  METRICS[section].forEach(m => {
+    const val = data[m.id] || '';
+    const card = document.createElement('div');
+    card.className = 'metric-card';
+    let statusHtml = '';
+    if (m.target && val) {
+      const num = parseFloat(val);
+      const pct = m.invert ? (num <= m.target ? 100 : (m.target / num) * 100) : (num / m.target) * 100;
+      const cls = pct >= 90 ? 'green' : pct >= 60 ? 'yellow' : 'red';
+      statusHtml = `<span class="status ${cls}"></span>`;
+    }
+    card.innerHTML = `
+      <label>${m.label} ${statusHtml}</label>
+      <input type="text" value="${val}" data-id="${m.id}" placeholder="${m.prefix || ''}0${m.suffix || ''}" inputmode="decimal">
+      <div class="target">${m.desc}</div>
+    `;
+    card.querySelector('input').addEventListener('input', function() {
+      const d = loadData();
+      d[this.dataset.id] = this.value;
+      saveData(d);
+      renderScoreBars();
+      // Re-render status dot
+      if (m.target) {
+        const num = parseFloat(this.value) || 0;
+        const pct = m.invert ? (num <= m.target ? 100 : (m.target / num) * 100) : (num / m.target) * 100;
+        const cls = pct >= 90 ? 'green' : pct >= 60 ? 'yellow' : 'red';
+        const dot = card.querySelector('.status');
+        if (dot) { dot.className = 'status ' + cls; }
+      }
+    });
+    container.appendChild(card);
+  });
+}
+
+function renderScoreBars() {
+  const data = loadData();
+  const bars = document.getElementById('scoreBars');
+  const sections = [
+    { label: 'Rover', key: 'rover', color: '#22c55e' },
+    { label: 'Lunouri', key: 'lunouri', color: '#a78bfa' },
+    { label: 'Personal', key: 'personal', color: '#facc15' },
+  ];
+  bars.innerHTML = '';
+  sections.forEach(s => {
+    const metrics = METRICS[s.key].filter(m => m.target);
+    if (!metrics.length) return;
+    let total = 0, count = 0;
+    metrics.forEach(m => {
+      const val = parseFloat(data[m.id]);
+      if (!isNaN(val)) {
+        const pct = m.invert ? Math.min(100, (m.target / val) * 100) : Math.min(100, (val / m.target) * 100);
+        total += pct;
+        count++;
+      }
+    });
+    const avg = count ? Math.round(total / count) : 0;
+    const color = avg >= 90 ? '#22c55e' : avg >= 60 ? '#facc15' : '#ef4444';
+    bars.innerHTML += `
+      <div class="score-bar">
+        <span class="label">${s.label}</span>
+        <div class="bar-bg"><div class="bar-fill" style="width:${avg}%;background:${color}"></div></div>
+        <span class="pct" style="color:${color}">${avg}%</span>
+      </div>
+    `;
+  });
+}
+
+function changeWeek(dir) {
+  if (dir === 0) currentWeekOffset = 0;
+  else currentWeekOffset += dir;
+  document.getElementById('weekLabel').textContent = getWeekLabel(currentWeekOffset);
+  renderAll();
+}
+
+function renderAll() {
+  const data = loadData();
+  renderMetrics('rover', 'roverMetrics');
+  renderMetrics('lunouri', 'lunouriMetrics');
+  renderMetrics('personal', 'personalMetrics');
+  renderScoreBars();
+  document.getElementById('weekNotes').value = data._notes || '';
+}
+
+document.getElementById('weekNotes').addEventListener('input', function() {
+  const d = loadData();
+  d._notes = this.value;
+  saveData(d);
+});
+
+function copyMarkdown() {
+  const data = loadData();
+  const week = getWeekLabel(currentWeekOffset);
+  let md = `## ${week}\n\n`;
+  ['rover', 'lunouri', 'personal'].forEach(section => {
+    md += `### ${section.charAt(0).toUpperCase() + section.slice(1)}\n`;
+    METRICS[section].forEach(m => {
+      const val = data[m.id] || '—';
+      const tgt = m.target ? ` (target: ${m.prefix||''}${m.target}${m.suffix||''})` : '';
+      md += `- **${m.label}:** ${m.prefix||''}${val}${m.suffix||''}${tgt}\n`;
+    });
+    md += '\n';
+  });
+  if (data._notes) md += `### Notes\n${data._notes}\n`;
+  navigator.clipboard.writeText(md).then(() => alert('Copied!')).catch(() => {
+    const t = document.createElement('textarea');
+    t.value = md; document.body.appendChild(t); t.select();
+    document.execCommand('copy'); document.body.removeChild(t); alert('Copied!');
+  });
+}
+
+function exportHistory() {
+  const all = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k.startsWith('scorecard_')) all[k] = JSON.parse(localStorage.getItem(k));
+  }
+  const blob = new Blob([JSON.stringify(all, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'scorecards-export.json';
+  a.click();
+}
+
+renderAll();
+</script>
+</body>
+</html>
