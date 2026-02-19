@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rover Daily Revenue Tracker</title>
+<style>
+  :root {
+    --bg: #0f1117; --surface: #1a1d27; --surface2: #242836;
+    --border: #2e3348; --text: #e4e6f0; --muted: #8b8fa3;
+    --green: #34d399; --green-bg: rgba(52,211,153,0.1);
+    --red: #f87171; --red-bg: rgba(248,113,113,0.1);
+    --blue: #60a5fa; --blue-bg: rgba(96,165,250,0.1);
+    --yellow: #fbbf24; --yellow-bg: rgba(251,191,36,0.1);
+    --purple: #a78bfa;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 20px; }
+  .container { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 1.5rem; margin-bottom: 4px; }
+  .subtitle { color: var(--muted); font-size: 0.85rem; margin-bottom: 24px; }
+  
+  /* Stats Row */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+  .stat-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 4px; }
+  .stat-value { font-size: 1.4rem; font-weight: 700; }
+  .stat-sub { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+  .stat.green .stat-value { color: var(--green); }
+  .stat.blue .stat-value { color: var(--blue); }
+  .stat.yellow .stat-value { color: var(--yellow); }
+  .stat.purple .stat-value { color: var(--purple); }
+  
+  /* Progress bar */
+  .progress-wrap { margin-bottom: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+  .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .progress-title { font-size: 0.85rem; font-weight: 600; }
+  .progress-pct { font-size: 0.85rem; color: var(--green); font-weight: 600; }
+  .progress-bar { height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--green), var(--blue)); border-radius: 4px; transition: width 0.4s; }
+  .progress-sub { display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.7rem; color: var(--muted); }
+
+  /* Sections */
+  .section { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+  .section-title { font-size: 0.95rem; font-weight: 600; margin-bottom: 14px; }
+  
+  /* Form */
+  .form-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 10px; align-items: end; }
+  label { font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 4px; }
+  input, select { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; color: var(--text); font-size: 0.85rem; width: 100%; }
+  input:focus, select:focus { outline: none; border-color: var(--blue); }
+  .btn { padding: 8px 16px; border: none; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+  .btn:hover { opacity: 0.85; }
+  .btn-green { background: var(--green); color: #000; }
+  .btn-red { background: var(--red); color: #000; font-size: 0.75rem; padding: 4px 8px; }
+  .btn-muted { background: var(--surface2); color: var(--muted); font-size: 0.75rem; padding: 4px 10px; }
+  
+  /* Table */
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); padding: 8px 0; border-bottom: 1px solid var(--border); }
+  td { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+  tr:last-child td { border-bottom: none; }
+  .job-type { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 500; }
+  .jt-dc { background: var(--yellow-bg); color: var(--yellow); }
+  .jt-rc { background: var(--green-bg); color: var(--green); }
+  .jt-sc { background: var(--blue-bg); color: var(--blue); }
+  .jt-mc { background: var(--red-bg); color: var(--red); }
+  
+  /* Date nav */
+  .date-nav { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .date-nav button { background: var(--surface2); border: 1px solid var(--border); color: var(--text); width: 32px; height: 32px; border-radius: 6px; cursor: pointer; font-size: 1rem; }
+  .date-nav button:hover { border-color: var(--blue); }
+  .date-display { font-size: 1rem; font-weight: 600; }
+  .date-sub { font-size: 0.75rem; color: var(--muted); }
+  
+  /* Target setting */
+  .target-row { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; }
+  .target-row input { width: 120px; }
+  
+  /* Chart area */
+  .chart-area { height: 160px; display: flex; align-items: flex-end; gap: 4px; padding-top: 10px; }
+  .chart-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; }
+  .chart-bar { width: 100%; min-height: 2px; border-radius: 3px 3px 0 0; transition: height 0.3s; cursor: pointer; position: relative; }
+  .chart-bar:hover { opacity: 0.8; }
+  .chart-label { font-size: 0.6rem; color: var(--muted); margin-top: 4px; }
+  .chart-val { font-size: 0.6rem; color: var(--muted); margin-bottom: 2px; }
+  
+  /* Responsive */
+  @media (max-width: 700px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .form-row { grid-template-columns: 1fr 1fr; }
+  }
+  .empty { text-align: center; color: var(--muted); padding: 30px; font-size: 0.85rem; }
+  .actions { display: flex; gap: 8px; margin-top: 14px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>📊 Rover Daily Revenue Tracker</h1>
+  <p class="subtitle">Log jobs, track revenue targets, spot trends</p>
+  
+  <!-- Date Nav -->
+  <div class="date-nav">
+    <button onclick="changeDate(-1)">‹</button>
+    <div>
+      <div class="date-display" id="dateDisplay"></div>
+      <div class="date-sub" id="dateSub"></div>
+    </div>
+    <button onclick="changeDate(1)">›</button>
+    <button onclick="goToday()" style="width:auto;padding:0 10px;font-size:0.75rem;">Today</button>
+  </div>
+  
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat green"><div class="stat-label">Today's Revenue</div><div class="stat-value" id="sTodayRev">$0</div><div class="stat-sub" id="sTodayJobs">0 jobs</div></div>
+    <div class="stat blue"><div class="stat-label">This Week</div><div class="stat-value" id="sWeekRev">$0</div><div class="stat-sub" id="sWeekJobs">0 jobs</div></div>
+    <div class="stat yellow"><div class="stat-label">This Month</div><div class="stat-value" id="sMonthRev">$0</div><div class="stat-sub" id="sMonthJobs">0 jobs</div></div>
+    <div class="stat purple"><div class="stat-label">Avg Job Size</div><div class="stat-value" id="sAvgJob">$0</div><div class="stat-sub" id="sAvgMargin">—</div></div>
+  </div>
+  
+  <!-- Monthly Target -->
+  <div class="progress-wrap">
+    <div class="progress-header">
+      <span class="progress-title">Monthly Revenue Target</span>
+      <span class="progress-pct" id="targetPct">0%</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="targetFill" style="width:0%"></div></div>
+    <div class="progress-sub">
+      <span id="targetCurrent">$0 earned</span>
+      <span id="targetGoal">$0 target</span>
+    </div>
+    <div class="target-row" style="margin-top:10px;">
+      <label style="margin:0;">Target: $</label>
+      <input type="number" id="monthlyTarget" value="80000" onchange="saveTarget();render()">
+      <button class="btn btn-muted" onclick="saveTarget();render()">Set</button>
+    </div>
+  </div>
+  
+  <!-- 14-day chart -->
+  <div class="section">
+    <div class="section-title">Last 14 Days</div>
+    <div class="chart-area" id="chart"></div>
+  </div>
+  
+  <!-- Add Job -->
+  <div class="section">
+    <div class="section-title">Log a Job</div>
+    <div class="form-row">
+      <div><label>Customer Name</label><input id="fName" placeholder="e.g. Smith"></div>
+      <div><label>Revenue ($)</label><input id="fRev" type="number" placeholder="180"></div>
+      <div><label>Contractor Pay ($)</label><input id="fPay" type="number" placeholder="80"></div>
+      <div>
+        <label>Job Type</label>
+        <select id="fType">
+          <option value="BRC">Biweekly Recurring</option>
+          <option value="WRC">Weekly Recurring</option>
+          <option value="MRC">Monthly Recurring</option>
+          <option value="3RC">Every 3 Weeks</option>
+          <option value="DC">Deep Clean</option>
+          <option value="MC">Move-out Clean</option>
+          <option value="SC">Standard (One-time)</option>
+        </select>
+      </div>
+      <div><label>&nbsp;</label><button class="btn btn-green" onclick="addJob()">+ Add</button></div>
+    </div>
+  </div>
+  
+  <!-- Jobs Table -->
+  <div class="section">
+    <div class="section-title">Jobs on <span id="tableDate"></span></div>
+    <div id="jobsTable"></div>
+    <div class="actions">
+      <button class="btn btn-muted" onclick="exportCSV()">Export All (CSV)</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const LS_KEY = 'rover_daily_jobs';
+const LS_TARGET = 'rover_monthly_target';
+let currentDate = new Date();
+
+function dateKey(d) {
+  return d.toISOString().slice(0,10);
+}
+function getAllJobs() {
+  return JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+}
+function saveJobs(jobs) {
+  localStorage.setItem(LS_KEY, JSON.stringify(jobs));
+}
+function getTarget() {
+  return parseInt(localStorage.getItem(LS_TARGET) || '80000');
+}
+function saveTarget() {
+  localStorage.setItem(LS_TARGET, document.getElementById('monthlyTarget').value);
+}
+
+function fmt(n) {
+  return '$' + n.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+}
+
+function addJob() {
+  const name = document.getElementById('fName').value.trim();
+  const rev = parseFloat(document.getElementById('fRev').value) || 0;
+  const pay = parseFloat(document.getElementById('fPay').value) || 0;
+  const type = document.getElementById('fType').value;
+  if (!name || !rev) return alert('Need at least a name and revenue.');
+  const jobs = getAllJobs();
+  jobs.push({ id: Date.now(), date: dateKey(currentDate), name, revenue: rev, pay, type, ts: new Date().toISOString() });
+  saveJobs(jobs);
+  document.getElementById('fName').value = '';
+  document.getElementById('fRev').value = '';
+  document.getElementById('fPay').value = '';
+  render();
+}
+
+function deleteJob(id) {
+  const jobs = getAllJobs().filter(j => j.id !== id);
+  saveJobs(jobs);
+  render();
+}
+
+function changeDate(delta) {
+  currentDate.setDate(currentDate.getDate() + delta);
+  render();
+}
+function goToday() {
+  currentDate = new Date();
+  render();
+}
+
+function getWeekStart(d) {
+  const dt = new Date(d);
+  const day = dt.getDay();
+  dt.setDate(dt.getDate() - day);
+  return dateKey(dt);
+}
+
+function typeClass(t) {
+  if (t.includes('RC')) return 'jt-rc';
+  if (t === 'DC') return 'jt-dc';
+  if (t === 'MC') return 'jt-mc';
+  return 'jt-sc';
+}
+const typeLabels = { BRC:'Biweekly', WRC:'Weekly', MRC:'Monthly', '3RC':'3-Week', '6RC':'6-Week', DC:'Deep Clean', MC:'Move-out', SC:'Standard' };
+
+function render() {
+  const jobs = getAllJobs();
+  const dk = dateKey(currentDate);
+  const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  
+  document.getElementById('dateDisplay').textContent = `${months[currentDate.getMonth()]} ${currentDate.getDate()}, ${currentDate.getFullYear()}`;
+  document.getElementById('dateSub').textContent = dayNames[currentDate.getDay()];
+  document.getElementById('tableDate').textContent = `${months[currentDate.getMonth()]} ${currentDate.getDate()}`;
+  
+  // Today's jobs
+  const todayJobs = jobs.filter(j => j.date === dk);
+  const todayRev = todayJobs.reduce((s,j) => s + j.revenue, 0);
+  const todayPay = todayJobs.reduce((s,j) => s + j.pay, 0);
+  document.getElementById('sTodayRev').textContent = fmt(todayRev);
+  document.getElementById('sTodayJobs').textContent = `${todayJobs.length} jobs`;
+  
+  // Week
+  const ws = getWeekStart(currentDate);
+  const weekJobs = jobs.filter(j => {
+    const jd = new Date(j.date + 'T12:00:00');
+    return getWeekStart(jd) === ws;
+  });
+  document.getElementById('sWeekRev').textContent = fmt(weekJobs.reduce((s,j) => s + j.revenue, 0));
+  document.getElementById('sWeekJobs').textContent = `${weekJobs.length} jobs`;
+  
+  // Month
+  const ym = dk.slice(0,7);
+  const monthJobs = jobs.filter(j => j.date.slice(0,7) === ym);
+  const monthRev = monthJobs.reduce((s,j) => s + j.revenue, 0);
+  document.getElementById('sMonthRev').textContent = fmt(monthRev);
+  document.getElementById('sMonthJobs').textContent = `${monthJobs.length} jobs`;
+  
+  // Avg
+  if (monthJobs.length > 0) {
+    const avg = monthRev / monthJobs.length;
+    const avgMargin = monthJobs.reduce((s,j) => s + (j.revenue - j.pay), 0) / monthRev * 100;
+    document.getElementById('sAvgJob').textContent = fmt(avg);
+    document.getElementById('sAvgMargin').textContent = `${avgMargin.toFixed(0)}% avg margin`;
+  } else {
+    document.getElementById('sAvgJob').textContent = '$0';
+    document.getElementById('sAvgMargin').textContent = '—';
+  }
+  
+  // Target
+  const target = getTarget();
+  document.getElementById('monthlyTarget').value = target;
+  const pct = target > 0 ? Math.min(100, monthRev / target * 100) : 0;
+  document.getElementById('targetPct').textContent = pct.toFixed(0) + '%';
+  document.getElementById('targetFill').style.width = pct + '%';
+  document.getElementById('targetCurrent').textContent = fmt(monthRev) + ' earned';
+  document.getElementById('targetGoal').textContent = fmt(target) + ' target';
+  
+  // Chart - last 14 days
+  const chartEl = document.getElementById('chart');
+  chartEl.innerHTML = '';
+  let maxRev = 1;
+  const chartData = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(currentDate);
+    d.setDate(d.getDate() - i);
+    const key = dateKey(d);
+    const dayJobs = jobs.filter(j => j.date === key);
+    const rev = dayJobs.reduce((s,j) => s + j.revenue, 0);
+    if (rev > maxRev) maxRev = rev;
+    chartData.push({ date: d, rev, count: dayJobs.length, key });
+  }
+  chartData.forEach(cd => {
+    const h = (cd.rev / maxRev) * 130;
+    const isToday = cd.key === dk;
+    const col = isToday ? 'var(--green)' : 'var(--blue)';
+    chartEl.innerHTML += `
+      <div class="chart-bar-wrap">
+        <div class="chart-val">${cd.rev > 0 ? fmt(cd.rev) : ''}</div>
+        <div class="chart-bar" style="height:${Math.max(2,h)}px;background:${col};opacity:${isToday?1:0.6};" title="${cd.key}: ${fmt(cd.rev)} (${cd.count} jobs)"></div>
+        <div class="chart-label">${cd.date.getDate()}</div>
+      </div>`;
+  });
+  
+  // Table
+  const tableEl = document.getElementById('jobsTable');
+  if (todayJobs.length === 0) {
+    tableEl.innerHTML = '<div class="empty">No jobs logged for this day</div>';
+  } else {
+    let html = '<table><tr><th>Customer</th><th>Type</th><th>Revenue</th><th>Pay</th><th>Margin</th><th></th></tr>';
+    todayJobs.forEach(j => {
+      const margin = j.revenue > 0 ? ((j.revenue - j.pay) / j.revenue * 100).toFixed(0) : 0;
+      const mc = margin >= 45 ? 'var(--green)' : margin >= 30 ? 'var(--yellow)' : 'var(--red)';
+      html += `<tr>
+        <td>${j.name}</td>
+        <td><span class="job-type ${typeClass(j.type)}">${typeLabels[j.type] || j.type}</span></td>
+        <td>${fmt(j.revenue)}</td>
+        <td>${fmt(j.pay)}</td>
+        <td style="color:${mc}">${margin}%</td>
+        <td><button class="btn btn-red" onclick="deleteJob(${j.id})">✕</button></td>
+      </tr>`;
+    });
+    html += '</table>';
+    tableEl.innerHTML = html;
+  }
+}
+
+function exportCSV() {
+  const jobs = getAllJobs();
+  if (!jobs.length) return alert('No data to export.');
+  let csv = 'Date,Customer,Revenue,Contractor Pay,Gross Profit,Margin %,Job Type\n';
+  jobs.sort((a,b) => a.date.localeCompare(b.date)).forEach(j => {
+    const gp = j.revenue - j.pay;
+    const m = j.revenue > 0 ? (gp/j.revenue*100).toFixed(1) : '0';
+    csv += `${j.date},"${j.name}",${j.revenue},${j.pay},${gp},${m},${j.type}\n`;
+  });
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'rover-jobs-export.csv';
+  a.click();
+}
+
+render();
+</script>
+</body>
+</html>
