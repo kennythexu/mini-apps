@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Mission Control</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+  background: #0d1117; color: #c9d1d9; min-height: 100vh;
+  padding: 16px; padding-bottom: 80px;
+  -webkit-font-smoothing: antialiased;
+}
+h1 { font-size: 1.5rem; font-weight: 700; color: #f0f6fc; }
+.updated { color: #484f58; font-size: 0.75rem; margin-top: 4px; }
+.header { margin-bottom: 20px; }
+
+.section {
+  background: #161b22; border: 1px solid #30363d; border-radius: 12px;
+  margin-bottom: 12px; overflow: hidden;
+}
+.section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; cursor: pointer; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.section-header:active { background: #1c2129; }
+.section-title { font-size: 0.95rem; font-weight: 600; color: #f0f6fc; display: flex; align-items: center; gap: 8px; }
+.section-count { background: #30363d; color: #8b949e; font-size: 0.7rem; padding: 2px 7px; border-radius: 10px; font-weight: 500; }
+.chevron { color: #484f58; font-size: 0.8rem; transition: transform 0.2s; }
+.chevron.open { transform: rotate(90deg); }
+.section-body { padding: 0 16px 14px; display: none; }
+.section-body.open { display: block; }
+
+.task {
+  padding: 10px 0; border-bottom: 1px solid #21262d;
+}
+.task:last-child { border-bottom: none; }
+.task-name { font-size: 0.85rem; font-weight: 500; color: #e6edf3; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+.task-detail { font-size: 0.75rem; color: #8b949e; padding-left: 12px; line-height: 1.5; }
+
+.badge {
+  display: inline-block; font-size: 0.6rem; font-weight: 600; padding: 2px 6px;
+  border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0;
+}
+.badge-red { background: #da3633; color: #fff; }
+.badge-yellow { background: #9e6a03; color: #fff; }
+.badge-green { background: #238636; color: #fff; }
+.badge-gray { background: #30363d; color: #8b949e; }
+
+.cron-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 0; border-bottom: 1px solid #21262d; font-size: 0.8rem;
+}
+.cron-row:last-child { border-bottom: none; }
+.cron-name { color: #e6edf3; font-weight: 500; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cron-meta { color: #8b949e; font-size: 0.7rem; text-align: right; flex-shrink: 0; margin-left: 8px; }
+.status-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; flex-shrink: 0; }
+.dot-ok { background: #3fb950; }
+.dot-error { background: #f85149; }
+.dot-idle { background: #484f58; }
+
+.memory-day { margin-bottom: 12px; }
+.memory-date { font-size: 0.8rem; font-weight: 600; color: #58a6ff; margin-bottom: 6px; }
+.memory-item { font-size: 0.75rem; color: #8b949e; padding: 3px 0 3px 10px; border-left: 2px solid #21262d; margin-bottom: 2px; }
+
+.placeholder { color: #484f58; font-size: 0.8rem; font-style: italic; padding: 12px 0; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>🚀 Mission Control</h1>
+  <div class="updated">Updated 2026-02-19 11:36:35 ET</div>
+</div>
+
+<div id="app"></div>
+
+<script>
+const DATA = {
+  tasks: {"in_progress": [{"name": "TX ISP Proxies (for Indeed monitoring)", "details": ["Goal: Get 1 dedicated static ISP proxy in TX for Indeed account/monitoring", "Status: 25+ providers checked. DEFINITIVE: Static ISP with TX targeting doesn't exist as self-service.", "VERIFIED DEAD ENDS (country-only for ISP/static): Bright Data, Oxylabs, Webshare, Proxy-Seller, IPRoyal, HypeProxies, Massive, PacketStream, ProxyEmpire, Decodo/Smartproxy, Rayobyte, IPBurger, ASOCKS (rotating only), LimeProxies (app broken)", "ONLY TX STATIC OPTION: HydraProxy \u2014 57 Dallas IPs (AT&T 4/5G), $3/IP/day (~$90/mo)", "Still awaiting email: Leastslow (\u20ac3.50/mo), NetNut (engaged), Infatica, PingProxies", "Recommended approach: Hybrid \u2014 HydraProxy $3 one-day for Indeed account creation, then Bright Data residential TX rotating for maintenance", "\ud83c\udfaf FOUND: AntsData \u2014 TX ISP proxy $6/IP/month (30 days), $4/IP/7 days. AT&T/Comcast. Dashboard confirmed. Account created with $1 free credit.", "Awaiting Kenny's approval to purchase 1 TX ISP proxy ($6 for 30 days)", "All creds in `.secrets/proxy-accounts.txt`"]}, {"name": "Snap Ads Dashboard (Daily)", "details": ["Rebuild when new data drops in Drive", "SOP: `snap-data/DAILY-PROCESS.md`", "Last rebuild: Feb 17 data (through Feb 16) \u2705", "Brief sent to Slack + uploaded to Drive"]}, {"name": "Review System Build", "details": ["ZERO automated review solicitation exists", "233 backfill candidates scored and uploaded to Google Sheets", "Blocked: Waiting for Kenny's decision on workflow approach"]}, {"name": "GBP Post Automation (pending)", "details": ["GBP Review Monitor cron active (daily 10 AM ET)", "Next: Post automation needs FB account for Barry \u2014 Kenny creating"]}, {"name": "Social Media Posting (next week)", "details": ["Need new photos from Nikkie, or reuse different subset", "Previous photos at: `social-posts/fw-batch-2026-02-16/`, `dallas-batch-2026-02-17/`, `chicago-batch-2026-02-17/`"]}, {"name": "Insurance Broker Outreach", "details": ["5 emails sent Feb 17 to: Braly, McKnight, TX Insurance Place, One80 (\u00d72)", "Braly replied! Caden Braly (caden@bralyinsurance.com) \u2014 asked for company info + Teams call", "Reply sent Feb 17 10PM with all company info, requested email-only communication", "Template saved: `templates/insurance-broker-reply.md`", "Cron: checks Gmail 3x/day for broker replies (ID: 694a6a20-46ad-4a8e-b686-b2e487231584)", "One email bounced: Risk Strategies (postmaster undeliverable)", "4 brokers without emails still need contact: Higginbotham, Dean & Draper, Quote Texas, Statewide General", "Tracking sheet: https://docs.google.com/spreadsheets/d/1AjxY7ICKvJyhMrOswpRvM6tDPfd6TX2hmdeU9qv7FaA/edit"]}, {"name": "Make.com Meta Lead Scenarios \u2705", "details": ["Both FB lead gen scenarios (Chicago 4435774 + DFW 4148506) confirmed active with instant triggers as of Feb 18. Kenny reauthorized."]}, {"name": "Git Nightly Backup \u2705", "details": ["Remote: `kennythexu/openclaw-workspace-backup` \u2014 working, last push Feb 17 \u2705"]}], "monitoring": [{"name": "Chicago Pricing Impact", "details": ["+25% effective Feb 11. Pre: 10.7% conversion, Post: 5.9% (only 5 days data)", "Need 2-3 more weeks. Include in weekly lead reports."]}, {"name": "Organic Traffic (Post-SEO Cancellation)", "details": ["Johnny (SEO agency) canceled Feb 15. Monitor weekly for 60 days."]}, {"name": "Smartproxy Email Reply", "details": ["Thread 19c6a2f60635de2e \u2014 sent Feb 17, no reply yet. Check daily."]}], "recurring": [{"name": "Snap dashboard rebuild (daily when data drops)", "details": []}, {"name": "Weekly lead report (Mon 6PM ET)", "details": []}, {"name": "Payroll QB\u2192YNAB (Wed 10AM ET)", "details": []}, {"name": "Weekly budget updates (Sun 6PM ET)", "details": []}, {"name": "Weekly GHL lead audit (auto via cron)", "details": []}, {"name": "Monthly churn analysis (auto via cron)", "details": []}], "completed": [{"name": "Cross-Context Messaging \u2014 Enabled, working", "details": []}, {"name": "Slack Channel Fix \u2014 31 channels allowlisted, working", "details": []}, {"name": "Social Media Posting (week of Feb 17) \u2014 All 3 locations posted", "details": []}, {"name": "GBP Access \u2014 Manager on all 3, review monitor cron active, 13 reviews replied", "details": []}]},
+  memory: [{"date": "2026-02-19", "day": "Thursday", "headers": ["GBP Review Reply Posted \u2014 Rover House Cleaners (Dallas)", "Lawsuit \u2014 Attorney Outreach (10:45 AM)", "Attorney Search \u2014 Continued (11:00 AM)"]}, {"date": "2026-02-18", "day": "Wednesday", "headers": ["AntsData Proxy (early AM)", "Matthew Berman OpenClaw Video (7 AM)", "Snap Brief SKAN Error (08:15 AM)", "Snap Dashboard Validation Steps Implemented"]}, {"date": "2026-02-17", "day": "Tuesday", "headers": ["Proxy-Seller Progress", "Snap Ads Dashboard", "Rover Cleaners", "Google OAuth", "Gmail Send Scope Enabled", "TX Proxy Inquiry Emails Sent (1:00 AM Feb 17)", "Pending/Blocked", "Key Snap Numbers (L7D Feb 8-14, SKAN-buffered)", "Overdue Reminders (Kenny's)", "Afternoon Session (2-5:30 PM)", "Late Evening Session (11 PM - 11:45 PM)"]}],
+  crons: [{"name": "openclaw-watchdog-eve", "schedule": "every 10m", "next": "in 5m", "last": "5m ago", "status": "ok"}, {"name": "YNAB Transaction Cate", "schedule": "cron 0 12 */2 * * @ America/N", "next": "in 23m", "last": "2d ago", "status": "ok"}, {"name": "meta-social-monitor", "schedule": "cron 0,30 8-21 * * * @ Americ", "next": "in 23m", "last": "7m ago", "status": "ok"}, {"name": "Check AntsData + prox", "schedule": "every 4h", "next": "in 38m", "last": "3h ago", "status": "ok"}, {"name": "Insurance Broker Emai", "schedule": "cron 0 9,14,19 * * * @ Americ", "next": "in 2h", "last": "3h ago", "status": "ok"}, {"name": "Evening Check-in", "schedule": "cron 30 16 * * * @ America/Ne", "next": "in 5h", "last": "19h ago", "status": "ok"}, {"name": "Nightly Workspace Backup", "schedule": "cron 0 23 * * * @ America/New", "next": "in 11h", "last": "13h ago", "status": "ok"}, {"name": "end-of-day-summary", "schedule": "cron 0 23 * * * @ America/New", "next": "in 11h", "last": "-", "status": "idle"}, {"name": "Overnight Mini-App Bu", "schedule": "cron 0 2 * * * @ America/New_", "next": "in 14h", "last": "10h ago", "status": "ok"}, {"name": "Librarian \u2014 Memory Hy", "schedule": "cron 0 7 * * 2,5 @ America/Ne", "next": "in 19h", "last": "-", "status": "idle"}, {"name": "Morning Check-in", "schedule": "cron 0 9 * * * @ America/New_", "next": "in 21h", "last": "3h ago", "status": "ok"}, {"name": "healthcheck:security-", "schedule": "cron 0 9 * * * @ America/New_", "next": "in 21h", "last": "3h ago", "status": "ok"}, {"name": "Rover Payroll QB\u2192YNAB", "schedule": "cron 0 10 * * 5 @ America/New", "next": "in 22h", "last": "6d ago", "status": "error"}, {"name": "GBP Review Monitor", "schedule": "cron 0 10 * * * @ America/New", "next": "in 22h", "last": "2h ago", "status": "ok"}, {"name": "Weekly Contractor Aud", "schedule": "cron 0 9 * * 6 @ America/New_", "next": "in 2d", "last": "5d ago", "status": "error"}, {"name": "Weekly Self-Audit (Dr", "schedule": "cron 0 3 * * 0 @ America/New_", "next": "in 3d", "last": "-", "status": "idle"}, {"name": "Weekly Personal Budge", "schedule": "cron 0 18 * * 0 @ America/New", "next": "in 3d", "last": "4d ago", "status": "ok"}, {"name": "Rover YNAB Weekly Sum", "schedule": "cron 0 18 * * 0 @ America/New", "next": "in 3d", "last": "4d ago", "status": "ok"}, {"name": "Weekly GHL Lead Audit", "schedule": "cron 0 10 * * 1 @ America/New", "next": "in 4d", "last": "3d ago", "status": "ok"}, {"name": "Monthly Recurring Chu", "schedule": "cron 0 10 1-7 * 1 @ America/N", "next": "in 4d", "last": "3d ago", "status": "ok"}, {"name": "Rover Weekly Lead Report", "schedule": "cron 0 18 * * 1 @ America/New", "next": "in 4d", "last": "3d ago", "status": "ok"}, {"name": "Lunouri Meta Ads Week", "schedule": "cron 0 10 * * 3 @ America/New", "next": "in 6d", "last": "1d ago", "status": "ok"}, {"name": "GHL Facebook Re-auth ", "schedule": "every 50d", "next": "in 49d", "last": "-", "status": "idle"}, {"name": "GHL Facebook Re-auth ", "schedule": "every 50d", "next": "in 49d", "last": "-", "status": "idle"}]
+};
+
+function renderTasks(items, badgeClass) {
+  if (!items.length) return '<div class="placeholder">No items</div>';
+  return items.map(t => `
+    <div class="task">
+      <div class="task-name"><span class="badge ${badgeClass}">${badgeClass.replace('badge-','')}</span>${esc(t.name)}</div>
+      ${t.details.slice(0,3).map(d => `<div class="task-detail">· ${esc(d)}</div>`).join('')}
+    </div>
+  `).join('');
+}
+
+function esc(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+const sections = [
+  { title: '🔴 Active Tasks', count: DATA.tasks.in_progress.length, body: renderTasks(DATA.tasks.in_progress, 'badge-red'), open: true },
+  { title: '🟡 Monitoring', count: DATA.tasks.monitoring.length, body: renderTasks(DATA.tasks.monitoring, 'badge-yellow') },
+  { title: '🟢 Recurring', count: DATA.tasks.recurring.length, body: renderTasks(DATA.tasks.recurring, 'badge-green') },
+  { title: '✅ Completed', count: DATA.tasks.completed.length, body: renderTasks(DATA.tasks.completed, 'badge-gray') },
+  { title: '⏰ Cron Jobs', count: DATA.crons.length, body: renderCrons() },
+  { title: '🧠 Recent Memory', count: DATA.memory.reduce((a,m)=>a+m.headers.length,0), body: renderMemory() },
+  { title: '🤖 Subagents', count: 0, body: '<div class="placeholder">Subagent activity will appear here in a future update.</div>' },
+];
+
+function renderCrons() {
+  if (!DATA.crons.length) return '<div class="placeholder">No cron data</div>';
+  return DATA.crons.map(c => `
+    <div class="cron-row">
+      <span class="status-dot dot-${c.status}"></span>
+      <span class="cron-name">${esc(c.name)}</span>
+      <span class="cron-meta">${esc(c.last || '-')}</span>
+    </div>
+  `).join('');
+}
+
+function renderMemory() {
+  if (!DATA.memory.length) return '<div class="placeholder">No recent memory</div>';
+  return DATA.memory.map(m => `
+    <div class="memory-day">
+      <div class="memory-date">${m.day} ${m.date}</div>
+      ${m.headers.map(h => `<div class="memory-item">${esc(h)}</div>`).join('')}
+    </div>
+  `).join('');
+}
+
+const app = document.getElementById('app');
+sections.forEach((s, i) => {
+  const sec = document.createElement('div');
+  sec.className = 'section';
+  sec.innerHTML = `
+    <div class="section-header" onclick="toggle(${i})">
+      <span class="section-title">${s.title} <span class="section-count">${s.count}</span></span>
+      <span class="chevron ${s.open?'open':''}" id="chev${i}">▶</span>
+    </div>
+    <div class="section-body ${s.open?'open':''}" id="body${i}">${s.body}</div>
+  `;
+  app.appendChild(sec);
+});
+
+function toggle(i) {
+  const body = document.getElementById('body'+i);
+  const chev = document.getElementById('chev'+i);
+  body.classList.toggle('open');
+  chev.classList.toggle('open');
+}
+</script>
+</body>
+</html>
