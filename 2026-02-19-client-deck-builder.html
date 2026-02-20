@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Client Deck Outliner — Snap Sales</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a0a;--card:#161616;--border:#2a2a2a;--yellow:#FFFC00;--text:#e5e5e5;--muted:#888;--accent:#FFFC00}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:20px}
+h1{font-size:1.4rem;color:var(--yellow);margin-bottom:4px;display:flex;align-items:center;gap:8px}
+h1 span{font-size:1.6rem}
+.subtitle{color:var(--muted);font-size:.85rem;margin-bottom:24px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:1200px;margin:0 auto}
+@media(max-width:768px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px}
+.card h2{font-size:.95rem;color:var(--yellow);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px}
+label{display:block;font-size:.8rem;color:var(--muted);margin-bottom:4px;margin-top:12px}
+label:first-of-type{margin-top:0}
+input,textarea,select{width:100%;background:#111;border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-size:.9rem;font-family:inherit}
+textarea{resize:vertical;min-height:60px}
+select{appearance:none;cursor:pointer}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--yellow)}
+.btn{background:var(--yellow);color:#000;border:none;padding:10px 20px;border-radius:8px;font-weight:700;font-size:.9rem;cursor:pointer;margin-top:16px;width:100%}
+.btn:hover{opacity:.9}
+.btn-secondary{background:transparent;border:1px solid var(--border);color:var(--text);font-weight:500}
+.btn-secondary:hover{border-color:var(--yellow);color:var(--yellow)}
+.output{background:#0d0d0d;border:1px solid var(--border);border-radius:10px;padding:20px;margin-top:20px;white-space:pre-wrap;font-size:.85rem;line-height:1.6;max-height:600px;overflow-y:auto;display:none}
+.output h3{color:var(--yellow);margin:16px 0 6px;font-size:.9rem}
+.output h3:first-child{margin-top:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip{background:#222;border:1px solid var(--border);padding:4px 10px;border-radius:20px;font-size:.75rem;cursor:pointer;transition:.2s}
+.chip:hover,.chip.active{background:var(--yellow);color:#000;border-color:var(--yellow)}
+.full-width{grid-column:1/-1}
+.saved-list{margin-top:12px;font-size:.8rem;color:var(--muted)}
+.saved-list div{padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer;display:flex;justify-content:space-between}
+.saved-list div:hover{color:var(--yellow)}
+.saved-list .del{color:#666;cursor:pointer}
+.saved-list .del:hover{color:red}
+.tag{display:inline-block;background:#1a1a00;color:var(--yellow);padding:2px 8px;border-radius:4px;font-size:.7rem;margin-left:6px}
+</style>
+</head>
+<body>
+<div style="max-width:1200px;margin:0 auto">
+<h1><span>👻</span> Client Deck Outliner</h1>
+<p class="subtitle">Build structured meeting outlines for Snap client pitches in 60 seconds</p>
+
+<div class="grid">
+  <div class="card">
+    <h2>📋 Client Info</h2>
+    <label>Client / Brand Name</label>
+    <input id="client" placeholder="e.g. Nike, Warby Parker">
+    <label>Industry / Vertical</label>
+    <select id="vertical">
+      <option value="">Select...</option>
+      <option>CPG / FMCG</option>
+      <option>Retail / Fashion</option>
+      <option>DTC / Ecommerce</option>
+      <option>Entertainment / Media</option>
+      <option>Tech / Apps</option>
+      <option>Finance / Insurance</option>
+      <option>QSR / Food & Bev</option>
+      <option>Auto</option>
+      <option>Travel / Hospitality</option>
+      <option>Health & Wellness</option>
+      <option>Other</option>
+    </select>
+    <label>Current Snap Spend (Monthly)</label>
+    <select id="spend">
+      <option value="">Select...</option>
+      <option>Not on Snap yet</option>
+      <option>< $10K</option>
+      <option>$10K - $50K</option>
+      <option>$50K - $200K</option>
+      <option>$200K+</option>
+    </select>
+    <label>Primary KPI</label>
+    <select id="kpi">
+      <option value="">Select...</option>
+      <option>Awareness / Reach</option>
+      <option>App Installs</option>
+      <option>Web Conversions / ROAS</option>
+      <option>Lead Gen</option>
+      <option>Engagement / UGC</option>
+      <option>Store Visits / Footfall</option>
+    </select>
+    <label>Decision Maker(s)</label>
+    <input id="contacts" placeholder="e.g. Sarah (CMO), Mike (Media Dir)">
+  </div>
+
+  <div class="card">
+    <h2>🎯 Meeting Context</h2>
+    <label>Meeting Type</label>
+    <select id="meetingType">
+      <option>QBR / Check-in</option>
+      <option>New Business Pitch</option>
+      <option>Upsell / Expansion</option>
+      <option>Campaign Kickoff</option>
+      <option>Post-Campaign Wrap</option>
+      <option>Renewal Discussion</option>
+    </select>
+    <label>Key Challenges / Pain Points</label>
+    <textarea id="challenges" placeholder="e.g. Struggling with iOS attribution, need to diversify from Meta"></textarea>
+    <label>Snap Products to Pitch</label>
+    <div class="chips" id="products">
+      <div class="chip" data-v="Snap Ads">Snap Ads</div>
+      <div class="chip" data-v="Story Ads">Story Ads</div>
+      <div class="chip" data-v="Collection Ads">Collection Ads</div>
+      <div class="chip" data-v="AR / Lenses">AR / Lenses</div>
+      <div class="chip" data-v="Spotlight">Spotlight</div>
+      <div class="chip" data-v="Dynamic Ads">Dynamic Ads</div>
+      <div class="chip" data-v="Commercials">Commercials</div>
+      <div class="chip" data-v="CAPI">CAPI</div>
+      <div class="chip" data-v="My AI Ads">My AI Ads</div>
+      <div class="chip" data-v="First Snap">First Snap</div>
+    </div>
+    <label>Notes / Context</label>
+    <textarea id="notes" placeholder="e.g. They ran a test in Q3, 2.1x ROAS. Agency is Mediacom."></textarea>
+  </div>
+
+  <div class="card full-width">
+    <div style="display:flex;gap:10px">
+      <button class="btn" onclick="generate()">⚡ Generate Deck Outline</button>
+      <button class="btn btn-secondary" onclick="savePrep()" style="width:auto;padding:10px 16px">💾 Save</button>
+      <button class="btn btn-secondary" onclick="copyOutput()" style="width:auto;padding:10px 16px">📋 Copy</button>
+      <button class="btn btn-secondary" onclick="exportMd()" style="width:auto;padding:10px 16px">📄 .md</button>
+    </div>
+    <div class="output" id="output"></div>
+  </div>
+
+  <div class="card full-width">
+    <h2>💾 Saved Preps</h2>
+    <div class="saved-list" id="savedList"><em style="color:#555">No saved preps yet</em></div>
+  </div>
+</div>
+</div>
+
+<script>
+// Chip toggle
+document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>c.classList.toggle('active'));
+
+function getSelected(){return[...document.querySelectorAll('.chip.active')].map(c=>c.dataset.v)}
+
+function val(id){return document.getElementById(id).value.trim()}
+
+function generate(){
+  const client=val('client')||'[Client]';
+  const vertical=val('vertical')||'N/A';
+  const spend=val('spend')||'N/A';
+  const kpi=val('kpi')||'N/A';
+  const contacts=val('contacts')||'N/A';
+  const type=val('meetingType');
+  const challenges=val('challenges')||'None specified';
+  const products=getSelected();
+  const notes=val('notes');
+
+  const prodList=products.length?products.map(p=>`  • ${p}`).join('\n'):'  • (none selected)';
+
+  // Build talking points based on KPI
+  const kpiTalks={
+    'Awareness / Reach':['Daily reach of 800M+ global users','Full-screen immersive format = higher recall','Snap Select for brand-safe premium content','Case study: similar vertical brand saw 2x lift in ad recall'],
+    'App Installs':['Snap App Install optimization with 7/0 model','Deep link support + deferred deep linking','Swipe-up CTA drives high-intent installs','Goal-based bidding: target CPI or optimize for ROAS'],
+    'Web Conversions / ROAS':['Snap Pixel + CAPI for full-funnel attribution','Dynamic Ads auto-retarget from product catalog','7/0 + 7/28 click attribution windows','Case study: DTC brands seeing 2-5x ROAS on Snap'],
+    'Lead Gen':['Lead Gen forms native in Snap Ads','Auto-fill from Snap profile → higher CVR','CRM integrations for instant lead routing','Lower CPL vs Meta for 18-34 demo'],
+    'Engagement / UGC':['AR Lenses drive 3x+ engagement vs static','Sponsored Lens + community filters','My AI integrations for conversational engagement','Spotlight placement for organic amplification'],
+    'Store Visits / Footfall':['Snap Map foot traffic attribution','Radius targeting + location categories','Place Ads on the Map for local discovery','Promoted Places drive in-store visits']
+  };
+
+  const talks=(kpiTalks[kpi]||['Customize talking points based on client goals']).map(t=>`  • ${t}`).join('\n');
+
+  // Meeting-type specific sections
+  const typeSection={
+    'QBR / Check-in':`\n### 📊 PERFORMANCE REVIEW\n  • Pull last quarter's campaign metrics\n  • Highlight wins + areas for optimization\n  • Benchmark vs vertical averages\n  • Attribution methodology alignment`,
+    'New Business Pitch':`\n### 🆕 WHY SNAPCHAT\n  • Audience: 75% of 13-34 in 25+ countries\n  • Incremental reach (not on Meta/TikTok)\n  • Brand safety: real friends, real content\n  • Measurement partners + clean room solutions`,
+    'Upsell / Expansion':`\n### 📈 GROWTH OPPORTUNITY\n  • Current performance benchmarks (show ROI)\n  • Untapped ad formats (AR, Spotlight, etc.)\n  • Seasonal tentpoles coming up\n  • Budget scenario modeling (2x spend → projected return)`,
+    'Campaign Kickoff':`\n### 🚀 CAMPAIGN SETUP\n  • Confirm objectives, budget, flight dates\n  • Creative specs + best practices\n  • Pixel/CAPI implementation checklist\n  • Optimization cadence + reporting schedule`,
+    'Post-Campaign Wrap':`\n### 📋 RESULTS & LEARNINGS\n  • Full-funnel metrics vs objectives\n  • Creative performance breakdown\n  • Audience insights + what worked\n  • Recommendations for next flight`,
+    'Renewal Discussion':`\n### 🔄 RENEWAL VALUE PROP\n  • YoY performance improvements\n  • New products/features since last IO\n  • Competitive landscape (why stay on Snap)\n  • Proposed terms + incentive tiers`
+  };
+
+  let outline=`══════════════════════════════════════
+  📑 DECK OUTLINE: ${client.toUpperCase()}
+══════════════════════════════════════
+
+📌 MEETING: ${type}
+🏢 CLIENT: ${client} (${vertical})
+💰 CURRENT SPEND: ${spend}
+🎯 PRIMARY KPI: ${kpi}
+👥 ATTENDEES: ${contacts}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+### 🤝 SLIDE 1 — OPENER / AGENDA (1 min)
+  • Thank + set context
+  • "${type}" focus for today
+  • Agenda: [Review → Opportunity → Recommendation → Next Steps]
+
+### 🏢 SLIDE 2 — CLIENT UNDERSTANDING (2 min)
+  • "${client}" business overview + goals
+  • Challenge: ${challenges}
+  • How Snap fits their media mix
+${typeSection[type]||''}
+
+### 🎯 SLIDE 3 — RECOMMENDED PRODUCTS
+${prodList}
+
+### 💬 SLIDE 4 — KEY TALKING POINTS (${kpi})
+${talks}
+
+### 📐 SLIDE 5 — PROPOSED PLAN
+  • Budget recommendation + flight dates
+  • Format mix + targeting strategy
+  • Creative approach
+  • Measurement plan
+
+### ✅ SLIDE 6 — NEXT STEPS
+  • Confirm budget / IO
+  • Creative timeline
+  • Pixel/CAPI setup (if needed)
+  • Schedule follow-up
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PREP NOTES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${notes||'(none)'}
+`;
+
+  const el=document.getElementById('output');
+  el.textContent=outline;
+  el.style.display='block';
+}
+
+function copyOutput(){
+  const t=document.getElementById('output').textContent;
+  if(t)navigator.clipboard.writeText(t);
+}
+
+function exportMd(){
+  const t=document.getElementById('output').textContent;
+  if(!t)return;
+  const blob=new Blob([t],{type:'text/markdown'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`${val('client')||'deck'}-outline.md`;
+  a.click();
+}
+
+// LocalStorage save/load
+function savePrep(){
+  const name=val('client');
+  if(!name){alert('Enter a client name first');return}
+  const data={client:val('client'),vertical:val('vertical'),spend:val('spend'),kpi:val('kpi'),contacts:val('contacts'),meetingType:val('meetingType'),challenges:val('challenges'),products:getSelected(),notes:val('notes'),date:new Date().toLocaleDateString()};
+  const saved=JSON.parse(localStorage.getItem('deckPreps')||'{}');
+  saved[name+'_'+Date.now()]=data;
+  localStorage.setItem('deckPreps',JSON.stringify(saved));
+  renderSaved();
+}
+
+function loadPrep(key){
+  const saved=JSON.parse(localStorage.getItem('deckPreps')||'{}');
+  const d=saved[key];if(!d)return;
+  document.getElementById('client').value=d.client||'';
+  document.getElementById('vertical').value=d.vertical||'';
+  document.getElementById('spend').value=d.spend||'';
+  document.getElementById('kpi').value=d.kpi||'';
+  document.getElementById('contacts').value=d.contacts||'';
+  document.getElementById('meetingType').value=d.meetingType||'';
+  document.getElementById('challenges').value=d.challenges||'';
+  document.getElementById('notes').value=d.notes||'';
+  document.querySelectorAll('.chip').forEach(c=>{c.classList.toggle('active',(d.products||[]).includes(c.dataset.v))});
+}
+
+function deletePrep(key,e){
+  e.stopPropagation();
+  const saved=JSON.parse(localStorage.getItem('deckPreps')||'{}');
+  delete saved[key];
+  localStorage.setItem('deckPreps',JSON.stringify(saved));
+  renderSaved();
+}
+
+function renderSaved(){
+  const saved=JSON.parse(localStorage.getItem('deckPreps')||'{}');
+  const el=document.getElementById('savedList');
+  const keys=Object.keys(saved);
+  if(!keys.length){el.innerHTML='<em style="color:#555">No saved preps yet</em>';return}
+  el.innerHTML=keys.map(k=>{
+    const d=saved[k];
+    return`<div onclick="loadPrep('${k}')"><span>${d.client} <span class="tag">${d.meetingType}</span> <span style="color:#555;font-size:.7rem">${d.date}</span></span><span class="del" onclick="deletePrep('${k}',event)">✕</span></div>`;
+  }).join('');
+}
+renderSaved();
+</script>
+</body>
+</html>
