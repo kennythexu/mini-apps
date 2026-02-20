@@ -224,6 +224,8 @@ function render() {
   html += '<th style="padding:6px 8px;color:#888;font-weight:500;text-align:right">Leads</th>';
   html += '<th style="padding:6px 8px;color:#888;font-weight:500;text-align:right">Booked</th>';
   html += '<th style="padding:6px 8px;color:#888;font-weight:500;text-align:right">Conv %</th>';
+  html += '<th style="padding:6px 8px;color:#888;font-weight:500;text-align:right">CAC</th>';
+  html += '<th style="padding:6px 8px;color:#888;font-weight:500;text-align:right">ROI</th>';
   html += '</tr></thead><tbody>';
 
   const cplDisplay = {
@@ -238,12 +240,30 @@ function render() {
     const c = cur[ch];
     const convRate = c.leads > 0 ? (c.booked / c.leads * 100).toFixed(1) : '0.0';
     const convColor = parseFloat(convRate) >= 20 ? '#4cc9f0' : parseFloat(convRate) >= 10 ? '#f77f00' : '#f72585';
+    // CAC = CPL × leads ÷ booked (cost per acquired customer)
+    let cacDisplay, roiDisplay;
+    if (ch === 'tt') {
+      cacDisplay = '<span style="color:#555">N/A</span>';
+      roiDisplay = '<span style="color:#555">N/A</span>';
+    } else if (ch === 'qf' || ch === 'oth') {
+      cacDisplay = '<span style="color:#4cc9f0">$0</span>';
+      roiDisplay = c.rev > 0 ? '<span style="color:#4cc9f0">∞</span>' : '<span style="color:#555">—</span>';
+    } else {
+      const cpl = ch === 'fb' ? fbCpl : (ch === 'lsa' ? 19 : 0);
+      const spend = cpl * c.leads;
+      const cac = c.booked > 0 ? spend / c.booked : null;
+      const roi = spend > 0 ? c.rev / spend : null;
+      cacDisplay = cac !== null ? '<span style="color:#fff;font-weight:600">$' + Math.round(cac) + '</span>' : '<span style="color:#555">—</span>';
+      roiDisplay = roi !== null ? '<span style="color:' + (roi >= 3 ? '#4cc9f0' : roi >= 1 ? '#f77f00' : '#f72585') + ';font-weight:700">' + roi.toFixed(1) + 'x</span>' : '<span style="color:#555">—</span>';
+    }
     html += '<tr style="border-bottom:1px solid #1a1a2e">';
     html += '<td style="padding:8px;display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + CH_COLORS[ch] + '"></span>' + CH_NAMES[ch] + '</td>';
     html += '<td style="padding:8px;text-align:right;color:#fff;font-weight:600">' + cplDisplay[ch] + '</td>';
     html += '<td style="padding:8px;text-align:right;color:#888">' + c.leads + '</td>';
     html += '<td style="padding:8px;text-align:right;color:#4cc9f0;font-weight:600">' + c.booked + '</td>';
     html += '<td style="padding:8px;text-align:right;font-weight:700;color:' + convColor + '">' + convRate + '%</td>';
+    html += '<td style="padding:8px;text-align:right">' + cacDisplay + '</td>';
+    html += '<td style="padding:8px;text-align:right">' + roiDisplay + '</td>';
     html += '</tr>';
   });
 
