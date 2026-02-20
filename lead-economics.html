@@ -213,6 +213,42 @@ function render() {
   html += '<div class="kpi"><div class="kpi-val">$' + Math.round(totalSpend).toLocaleString() + '</div><div class="kpi-label">Total Spend</div></div>';
   html += '</div>';
 
+  // === CPL & Conversion Rate Summary ===
+  html += '<div class="section-title">📊 Channel CPL & Conversion Rates</div>';
+  html += '<div class="section-sub">Cost per lead input + lead-to-booked conversion · L' + half + 'W</div>';
+  html += '<div class="card" style="overflow-x:auto">';
+  html += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  html += '<thead><tr style="border-bottom:1px solid #333;text-align:left">';
+  html += '<th style="padding:6px 8px;color:#888;font-weight:500">Channel</th>';
+  html += '<th style="padding:6px 8px;color:#888;font-weight:500;text-align:right">CPL</th>';
+  html += '<th style="padding:6px 8px;color:#888;font-weight:500;text-align:right">Leads</th>';
+  html += '<th style="padding:6px 8px;color:#888;font-weight:500;text-align:right">Booked</th>';
+  html += '<th style="padding:6px 8px;color:#888;font-weight:500;text-align:right">Conv %</th>';
+  html += '</tr></thead><tbody>';
+
+  const cplDisplay = {
+    fb: currentMarket === 'Chicago' ? '$2.50' : currentMarket === 'DFW' ? '$5.00' : '$' + fbCpl.toFixed(2),
+    lsa: '$19.00',
+    qf: '$0 <span style="color:#555;font-size:10px">(organic)</span>',
+    tt: '<span style="color:#555">N/A</span>',
+    oth: '$0 <span style="color:#555;font-size:10px">(organic)</span>'
+  };
+
+  channels.forEach(ch => {
+    const c = cur[ch];
+    const convRate = c.leads > 0 ? (c.booked / c.leads * 100).toFixed(1) : '0.0';
+    const convColor = parseFloat(convRate) >= 20 ? '#4cc9f0' : parseFloat(convRate) >= 10 ? '#f77f00' : '#f72585';
+    html += '<tr style="border-bottom:1px solid #1a1a2e">';
+    html += '<td style="padding:8px;display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + CH_COLORS[ch] + '"></span>' + CH_NAMES[ch] + '</td>';
+    html += '<td style="padding:8px;text-align:right;color:#fff;font-weight:600">' + cplDisplay[ch] + '</td>';
+    html += '<td style="padding:8px;text-align:right;color:#888">' + c.leads + '</td>';
+    html += '<td style="padding:8px;text-align:right;color:#4cc9f0;font-weight:600">' + c.booked + '</td>';
+    html += '<td style="padding:8px;text-align:right;font-weight:700;color:' + convColor + '">' + convRate + '%</td>';
+    html += '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+
   // === 1. Cost per Booked Lead (CPB) ===
   html += '<div class="section-title">1️⃣ Cost per Booked Lead</div>';
   html += '<div class="section-sub">L' + half + 'W · (CPL × Leads) ÷ Booked = CPB</div>';
