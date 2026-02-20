@@ -130,6 +130,44 @@ const CH_NAMES = { fb: 'Facebook', lsa: 'LSA', qf: 'Quote Form', tt: 'Thumbtack'
 let currentMarket = 'All';
 let currentWeeks = 13;
 
+// Profit margin multipliers (net profit = revenue × multiplier)
+// DFW: 47% gross margin - 7.62% sales tax = 39.38%
+// Chicago: 47% gross margin - 0% sales tax = 47%
+// Untagged: default to DFW rates
+// All: blended ~41%
+function getProfitMultiplier(market) {
+  if (market === 'DFW') return 0.3938;
+  if (market === 'Chicago') return 0.47;
+  if (market === 'Untagged') return 0.3938;
+  return 0.41; // All — blended
+}
+
+function getChannelProfit(weeks, channel, market) {
+  const srcMap = { fb: 'FB', lsa: 'LSA', qf: 'QF', tt: 'TT', oth: 'Other' };
+  let profit = 0;
+  if (market === 'All') {
+    // Per-lead profit based on which market the lead belongs to
+    // Use ci field: leads with ci="?" are untagged/DFW, leads in Chicago data get 0.47
+    // Simplest: just use blended 0.41
+    const mult = 0.41;
+    weeks.forEach(w => {
+      if (!w.leads) return;
+      w.leads.forEach(l => {
+        if (l.st === 'Booked' && l.s === srcMap[channel]) profit += (l.r || 0) * mult;
+      });
+    });
+  } else {
+    const mult = getProfitMultiplier(market);
+    weeks.forEach(w => {
+      if (!w.leads) return;
+      w.leads.forEach(l => {
+        if (l.st === 'Booked' && l.s === srcMap[channel]) profit += (l.r || 0) * mult;
+      });
+    });
+  }
+  return profit;
+}
+
 function getFbCpl(market) {
   if (market === 'DFW') return COST_PER_LEAD.fb_dfw;
   if (market === 'Chicago') return COST_PER_LEAD.fb_chi;
@@ -185,12 +223,15 @@ function render() {
     const leads = sum(weeks, ch);
     const booked = sum(weeks, ch + '_bk');
     const rev = getChannelRevenue(weeks, ch);
+    const profit = getChannelProfit(weeks, ch, currentMarket);
     let cpl = ch === 'fb' ? fbCpl : (ch === 'lsa' ? COST_PER_LEAD.lsa : (ch === 'tt' ? null : 0));
     const spend = cpl != null ? cpl * leads : null;
     const cpb = (booked > 0 && spend != null) ? spend / booked : null;
     const roi = (spend > 0) ? rev / spend : null;
+    const profitRoi = (spend > 0) ? profit / spend : null;
     const avgTicket = booked > 0 ? rev / booked : 0;
-    return { leads, booked, rev, cpl, spend, cpb, roi, avgTicket };
+    const profitPerBooking = booked > 0 ? profit / booked : 0;
+    return { leads, booked, rev, profit, cpl, spend, cpb, roi, profitRoi, avgTicket, profitPerBooking };
   }
 
   const cur = {}, prv = {};
@@ -204,15 +245,31 @@ function render() {
   // === KPI summary ===
   const totalSpend = paid.reduce((s, ch) => s + (cur[ch].spend || 0), 0);
   const totalRev = channels.reduce((s, ch) => s + cur[ch].rev, 0);
+  const totalProfit = channels.reduce((s, ch) => s + cur[ch].profit, 0);
   const totalBooked = channels.reduce((s, ch) => s + cur[ch].booked, 0);
   const blendedCac = totalBooked > 0 ? totalSpend / totalBooked : 0;
   const blendedRoi = totalSpend > 0 ? totalRev / totalSpend : Infinity;
+  const profitRoiAll = totalSpend > 0 ? totalProfit / totalSpend : Infinity;
+  const profitPerBooking = totalBooked > 0 ? totalProfit / totalBooked : 0;
+
+  // Previous period totals for comparison
+  const prevTotalProfit = channels.reduce((s, ch) => s + prv[ch].profit, 0);
+  const prevTotalBooked = channels.reduce((s, ch) => s + prv[ch].booked, 0);
+  const prevProfitPerBooking = prevTotalBooked > 0 ? prevTotalProfit / prevTotalBooked : 0;
+  const profitChg = prevTotalProfit > 0 ? ((totalProfit - prevTotalProfit) / prevTotalProfit * 100) : 0;
+  const ppbChg = prevProfitPerBooking > 0 ? ((profitPerBooking - prevProfitPerBooking) / prevProfitPerBooking * 100) : 0;
 
   html += '<div class="kpi-row">';
   html += '<div class="kpi"><div class="kpi-val">$' + Math.round(blendedCac) + '</div><div class="kpi-label">Blended CAC</div></div>';
-  html += '<div class="kpi"><div class="kpi-val">' + (blendedRoi === Infinity ? '∞' : blendedRoi.toFixed(1) + 'x') + '</div><div class="kpi-label">Blended ROI</div></div>';
-  html += '<div class="kpi"><div class="kpi-val">$' + Math.round(totalSpend).toLocaleString() + '</div><div class="kpi-label">Total Spend</div></div>';
+  html += '<div class="kpi"><div class="kpi-val">' + (profitRoiAll === Infinity ? '∞' : profitRoiAll.toFixed(1) + 'x') + '</div><div class="kpi-label">Profit ROI</div></div>';
+  html += '<div class="kpi"><div class="kpi-val">$' + Math.round(totalProfit).toLocaleString() + '</div>';
+  if (profitChg !== 0) html += '<div style="font-size:10px;margin-top:2px" class="' + (profitChg >= 0 ? 'up' : 'down') + '">' + (profitChg >= 0 ? '↑' : '↓') + Math.abs(Math.round(profitChg)) + '% vs prev</div>';
+  html += '<div class="kpi-label">Est. Profit</div></div>';
+  html += '<div class="kpi"><div class="kpi-val">$' + Math.round(profitPerBooking) + '</div>';
+  if (ppbChg !== 0) html += '<div style="font-size:10px;margin-top:2px" class="' + (ppbChg >= 0 ? 'up' : 'down') + '">' + (ppbChg >= 0 ? '↑' : '↓') + Math.abs(Math.round(ppbChg)) + '% vs prev</div>';
+  html += '<div class="kpi-label">Profit / Booking</div></div>';
   html += '</div>';
+  html += '<div style="font-size:10px;color:#555;margin:-8px 0 14px;text-align:center">Profit = Rev × ' + (getProfitMultiplier(currentMarket) * 100).toFixed(1) + '% net margin (' + currentMarket + ') · after COGS + sales tax</div>';
 
   // === CPL & Conversion Rate Summary ===
   html += '<div class="section-title">📊 Channel CPL & Conversion Rates</div>';
@@ -227,6 +284,8 @@ function render() {
   html += '<th style="padding:6px 8px;color:#888;font-weight:500;text-align:right">Conv %</th>';
   html += '<th style="padding:6px 8px;color:#888;font-weight:500;text-align:right">CAC</th>';
   html += '<th style="padding:6px 8px;color:#888;font-weight:500;text-align:right">ROI</th>';
+  html += '<th style="padding:6px 8px;color:#888;font-weight:500;text-align:right">Est. Profit</th>';
+  html += '<th style="padding:6px 8px;color:#888;font-weight:500;text-align:right">Profit ROI</th>';
   html += '</tr></thead><tbody>';
 
   const cplDisplay = {
@@ -265,6 +324,16 @@ function render() {
     html += '<td style="padding:8px;text-align:right;font-weight:700;color:' + convColor + '">' + convRate + '%</td>';
     html += '<td style="padding:8px;text-align:right">' + cacDisplay + '</td>';
     html += '<td style="padding:8px;text-align:right">' + roiDisplay + '</td>';
+    html += '<td style="padding:8px;text-align:right;color:#4cc9f0;font-weight:600">$' + Math.round(c.profit).toLocaleString() + '</td>';
+    let profitRoiDisplay;
+    if (ch === 'tt') {
+      profitRoiDisplay = '<span style="color:#555">N/A</span>';
+    } else if (ch === 'qf' || ch === 'oth') {
+      profitRoiDisplay = c.profit > 0 ? '<span style="color:#4cc9f0">∞</span>' : '<span style="color:#555">—</span>';
+    } else {
+      profitRoiDisplay = c.profitRoi !== null ? '<span style="color:' + (c.profitRoi >= 2 ? '#4cc9f0' : c.profitRoi >= 1 ? '#f77f00' : '#f72585') + ';font-weight:700">' + c.profitRoi.toFixed(1) + 'x</span>' : '<span style="color:#555">—</span>';
+    }
+    html += '<td style="padding:8px;text-align:right">' + profitRoiDisplay + '</td>';
     html += '</tr>';
   });
 
@@ -297,18 +366,18 @@ function render() {
   html += '</div>';
 
   // === 2. ROI per Channel (HERO) ===
-  html += '<div class="section-title">2️⃣ ROI per Channel — Revenue per Dollar Spent</div>';
-  html += '<div class="section-sub">Hero metric: total revenue from booked leads ÷ total ad spend</div>';
+  html += '<div class="section-title">2️⃣ Profit ROI per Channel — Real Return per Dollar Spent</div>';
+  html += '<div class="section-sub">Net profit (after COGS + tax) ÷ ad spend · the metric that actually matters</div>';
   html += '<div class="card hero">';
 
-  const maxRoi = Math.max(...paid.map(ch => cur[ch].roi || 0), 1);
+  const maxProfitRoi = Math.max(...paid.map(ch => cur[ch].profitRoi || 0), 1);
   paid.forEach(ch => {
     const c = cur[ch];
-    if (c.roi == null) return;
-    const pct = (c.roi / maxRoi) * 100;
+    if (c.profitRoi == null) return;
+    const pct = (c.profitRoi / maxProfitRoi) * 100;
     html += '<div class="hbar-row"><div class="hbar-label">' + CH_NAMES[ch] + '</div>';
-    html += '<div class="hbar-track"><div class="hbar-fill" style="width:' + pct + '%;background:' + CH_COLORS[ch] + '">' + c.roi.toFixed(1) + 'x</div>';
-    html += '<div class="hbar-val">$' + c.rev.toLocaleString() + ' / $' + Math.round(c.spend).toLocaleString() + '</div>';
+    html += '<div class="hbar-track"><div class="hbar-fill" style="width:' + pct + '%;background:' + CH_COLORS[ch] + '">' + c.profitRoi.toFixed(1) + 'x profit</div>';
+    html += '<div class="hbar-val">$' + Math.round(c.profit).toLocaleString() + ' / $' + Math.round(c.spend).toLocaleString() + ' <span style="color:#555;font-size:9px">(rev ' + c.roi.toFixed(1) + 'x)</span></div>';
     html += '</div></div>';
   });
 
@@ -318,14 +387,14 @@ function render() {
   organic.forEach(ch => {
     const c = cur[ch];
     html += '<div class="organic-row"><div class="organic-label">' + CH_NAMES[ch] + '</div>';
-    html += '<div class="organic-val">$' + c.rev.toLocaleString() + ' rev</div>';
-    html += '<div class="organic-note">' + c.booked + ' booked · ∞ ROI</div></div>';
+    html += '<div class="organic-val">$' + Math.round(c.profit).toLocaleString() + ' profit</div>';
+    html += '<div class="organic-note">' + c.booked + ' booked · $' + c.rev.toLocaleString() + ' rev · ∞ ROI</div></div>';
   });
   // Thumbtack
   const ttc = cur.tt;
   html += '<div class="organic-row"><div class="organic-label">Thumbtack</div>';
-  html += '<div class="organic-val">$' + ttc.rev.toLocaleString() + ' rev</div>';
-  html += '<div class="organic-note">' + ttc.booked + ' booked · spend N/A</div></div>';
+  html += '<div class="organic-val">$' + Math.round(ttc.profit).toLocaleString() + ' profit</div>';
+  html += '<div class="organic-note">' + ttc.booked + ' booked · $' + ttc.rev.toLocaleString() + ' rev · spend N/A</div></div>';
   html += '</div></div>';
 
   // === 3. Blended CAC vs Ticket Size ===
