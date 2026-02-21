@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>90-Day Cash Flow Forecast</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0f1117;--card:#1a1d27;--border:#2a2d3a;--text:#e4e4e7;--muted:#71717a;--green:#22c55e;--red:#ef4444;--blue:#3b82f6;--yellow:#eab308;--purple:#a855f7}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);padding:20px;max-width:1200px;margin:0 auto}
+h1{font-size:1.5rem;margin-bottom:4px}
+.subtitle{color:var(--muted);font-size:.85rem;margin-bottom:24px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+@media(max-width:768px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px}
+.card h2{font-size:1rem;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card h2 span{font-size:1.2rem}
+.row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+.row label{width:140px;font-size:.85rem;color:var(--muted);flex-shrink:0}
+.row input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:.9rem}
+.row input:focus{outline:none;border-color:var(--blue)}
+.section-label{font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:12px 0 6px;font-weight:600}
+button{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:.9rem;cursor:pointer;font-weight:600;width:100%;margin-bottom:24px}
+button:hover{opacity:.9}
+.summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+@media(max-width:768px){.summary-grid{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center}
+.stat .label{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.stat .value{font-size:1.4rem;font-weight:700;margin-top:4px}
+.stat .sub{font-size:.75rem;color:var(--muted);margin-top:2px}
+.positive{color:var(--green)}.negative{color:var(--red)}
+canvas{width:100%!important;height:300px!important;margin-bottom:24px}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+th{text-align:left;padding:8px 12px;border-bottom:2px solid var(--border);color:var(--muted);font-size:.75rem;text-transform:uppercase}
+td{padding:8px 12px;border-bottom:1px solid var(--border)}
+tr:hover{background:rgba(59,130,246,.05)}
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.75rem;font-weight:600}
+.tag-green{background:rgba(34,197,94,.15);color:var(--green)}
+.tag-red{background:rgba(239,68,68,.15);color:var(--red)}
+.tag-yellow{background:rgba(234,179,8,.15);color:var(--yellow)}
+#chart-container{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:24px}
+#chart-container h2{font-size:1rem;margin-bottom:12px}
+.expenses-list{max-height:200px;overflow-y:auto}
+.expense-item{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)}
+.expense-item:last-child{border:none}
+.remove-btn{background:none;border:none;color:var(--red);cursor:pointer;font-size:1rem;width:auto;margin:0;padding:2px 6px}
+.add-btn{background:var(--card);border:1px dashed var(--border);color:var(--muted);font-size:.85rem;padding:8px;margin-top:8px;width:100%;border-radius:6px;cursor:pointer}
+.add-btn:hover{border-color:var(--blue);color:var(--blue)}
+.hidden{display:none}
+.persist-note{text-align:center;color:var(--muted);font-size:.75rem;margin-top:16px}
+</style>
+</head>
+<body>
+
+<h1>📊 90-Day Cash Flow Forecast</h1>
+<p class="subtitle">Rover · Lunouri · Snapchat W2 — see where you'll be in 3 months</p>
+
+<div class="grid">
+  <!-- INCOME -->
+  <div class="card">
+    <h2><span>💰</span> Monthly Income</h2>
+    
+    <div class="section-label">Rover Cleaners</div>
+    <div class="row"><label>Monthly Revenue</label><input id="rover-rev" type="number" value="80000" step="1000"></div>
+    <div class="row"><label>Growth %/mo</label><input id="rover-growth" type="number" value="2" step="0.5"></div>
+    <div class="row"><label>Profit Margin %</label><input id="rover-margin" type="number" value="20" step="1"></div>
+
+    <div class="section-label">Lunouri</div>
+    <div class="row"><label>Monthly Revenue</label><input id="lunouri-rev" type="number" value="5000" step="500"></div>
+    <div class="row"><label>Growth %/mo</label><input id="lunouri-growth" type="number" value="10" step="1"></div>
+    <div class="row"><label>Profit Margin %</label><input id="lunouri-margin" type="number" value="60" step="1"></div>
+
+    <div class="section-label">Snapchat W2</div>
+    <div class="row"><label>Monthly Net Pay</label><input id="w2-pay" type="number" value="8000" step="500"></div>
+  </div>
+
+  <!-- EXPENSES -->
+  <div class="card">
+    <h2><span>📤</span> Fixed Monthly Expenses</h2>
+    <p style="font-size:.8rem;color:var(--muted);margin-bottom:12px">Personal + business overhead not in margins above</p>
+    
+    <div class="expenses-list" id="expenses-list"></div>
+    <button class="add-btn" onclick="addExpense()">+ Add Expense</button>
+
+    <div class="section-label" style="margin-top:16px">One-Time Expenses (next 90 days)</div>
+    <div class="expenses-list" id="onetime-list"></div>
+    <button class="add-btn" onclick="addOneTime()">+ Add One-Time Expense</button>
+  </div>
+</div>
+
+<button onclick="forecast()">🔮 Generate 90-Day Forecast</button>
+
+<div id="results" class="hidden">
+  <div class="summary-grid" id="summary"></div>
+  
+  <div id="chart-container">
+    <h2>Cumulative Cash Flow</h2>
+    <canvas id="chart"></canvas>
+  </div>
+
+  <div class="card" style="margin-bottom:24px">
+    <h2><span>📅</span> Monthly Breakdown</h2>
+    <table>
+      <thead>
+        <tr><th>Month</th><th>Rover Profit</th><th>Lunouri Profit</th><th>W2 Pay</th><th>Expenses</th><th>Net Cash</th><th>Cumulative</th><th>Status</th></tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2><span>🎯</span> $500K Goal Tracker</h2>
+    <p id="goal-text" style="font-size:.9rem;line-height:1.6"></p>
+  </div>
+</div>
+
+<p class="persist-note">💾 Inputs auto-save to localStorage</p>
+
+<script>
+const DEFAULT_EXPENSES=[{name:'Rent/Mortgage',amount:2500},{name:'Car/Insurance',amount:800},{name:'Food/Living',amount:1200},{name:'Subscriptions/Tools',amount:500}];
+let expenses=JSON.parse(localStorage.getItem('cf-expenses'))||DEFAULT_EXPENSES;
+let onetimes=JSON.parse(localStorage.getItem('cf-onetimes'))||[];
+
+function renderExpenses(){
+  const el=document.getElementById('expenses-list');
+  el.innerHTML=expenses.map((e,i)=>`<div class="expense-item"><span>${e.name}: $${e.amount.toLocaleString()}</span><button class="remove-btn" onclick="removeExpense(${i})">×</button></div>`).join('');
+  localStorage.setItem('cf-expenses',JSON.stringify(expenses));
+}
+function renderOneTime(){
+  const el=document.getElementById('onetime-list');
+  el.innerHTML=onetimes.map((e,i)=>`<div class="expense-item"><span>${e.name}: $${e.amount.toLocaleString()} (Month ${e.month})</span><button class="remove-btn" onclick="removeOneTime(${i})">×</button></div>`).join('');
+  localStorage.setItem('cf-onetimes',JSON.stringify(onetimes));
+}
+function addExpense(){
+  const name=prompt('Expense name:');if(!name)return;
+  const amount=parseFloat(prompt('Monthly amount ($):'));if(isNaN(amount))return;
+  expenses.push({name,amount});renderExpenses();
+}
+function removeExpense(i){expenses.splice(i,1);renderExpenses();}
+function addOneTime(){
+  const name=prompt('Expense name:');if(!name)return;
+  const amount=parseFloat(prompt('Amount ($):'));if(isNaN(amount))return;
+  const month=parseInt(prompt('Which month? (1, 2, or 3)'));if(![1,2,3].includes(month))return;
+  onetimes.push({name,amount,month});renderOneTime();
+}
+function removeOneTime(i){onetimes.splice(i,1);renderOneTime();}
+
+function v(id){return parseFloat(document.getElementById(id).value)||0;}
+
+function forecast(){
+  const rRev=v('rover-rev'),rGrow=v('rover-growth')/100,rMar=v('rover-margin')/100;
+  const lRev=v('lunouri-rev'),lGrow=v('lunouri-growth')/100,lMar=v('lunouri-margin')/100;
+  const w2=v('w2-pay');
+  const monthlyExp=expenses.reduce((s,e)=>s+e.amount,0);
+
+  // Save inputs
+  ['rover-rev','rover-growth','rover-margin','lunouri-rev','lunouri-growth','lunouri-margin','w2-pay'].forEach(id=>localStorage.setItem('cf-'+id,document.getElementById(id).value));
+
+  let months=[],cumulative=0;
+  for(let m=1;m<=3;m++){
+    const rr=rRev*Math.pow(1+rGrow,m-1);
+    const rp=rr*rMar;
+    const lr=lRev*Math.pow(1+lGrow,m-1);
+    const lp=lr*lMar;
+    const oneTimeTotal=onetimes.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
+    const totalExp=monthlyExp+oneTimeTotal;
+    const net=rp+lp+w2-totalExp;
+    cumulative+=net;
+    months.push({m,rRev:rr,rProfit:rp,lRev:lr,lProfit:lp,w2,expenses:totalExp,net,cumulative});
+  }
+
+  // Summary
+  const total90=months[2].cumulative;
+  const avgMonthly=total90/3;
+  const annualized=(months[2].net)*12;
+  const m3=months[2];
+  document.getElementById('summary').innerHTML=`
+    <div class="stat"><div class="label">90-Day Net Cash</div><div class="value ${total90>=0?'positive':'negative'}">$${Math.round(total90).toLocaleString()}</div></div>
+    <div class="stat"><div class="label">Avg Monthly Net</div><div class="value ${avgMonthly>=0?'positive':'negative'}">$${Math.round(avgMonthly).toLocaleString()}</div></div>
+    <div class="stat"><div class="label">Month 3 Run Rate (Annual)</div><div class="value ${annualized>=0?'positive':'negative'}">$${Math.round(annualized).toLocaleString()}</div></div>
+    <div class="stat"><div class="label">Month 3 Income Split</div><div class="value" style="font-size:1rem">R:${Math.round(m3.rProfit/(m3.rProfit+m3.lProfit+m3.w2)*100)}% L:${Math.round(m3.lProfit/(m3.rProfit+m3.lProfit+m3.w2)*100)}% W:${Math.round(m3.w2/(m3.rProfit+m3.lProfit+m3.w2)*100)}%</div></div>
+  `;
+
+  // Table
+  document.getElementById('table-body').innerHTML=months.map(m=>{
+    const status=m.net>5000?'tag-green':m.net>0?'tag-yellow':'tag-red';
+    const label=m.net>5000?'Strong':m.net>0?'OK':'⚠️ Negative';
+    return`<tr>
+      <td>Month ${m.m}</td>
+      <td>$${Math.round(m.rProfit).toLocaleString()}</td>
+      <td>$${Math.round(m.lProfit).toLocaleString()}</td>
+      <td>$${Math.round(m.w2).toLocaleString()}</td>
+      <td class="negative">-$${Math.round(m.expenses).toLocaleString()}</td>
+      <td class="${m.net>=0?'positive':'negative'}">$${Math.round(m.net).toLocaleString()}</td>
+      <td class="${m.cumulative>=0?'positive':'negative'}">$${Math.round(m.cumulative).toLocaleString()}</td>
+      <td><span class="tag ${status}">${label}</span></td>
+    </tr>`;
+  }).join('');
+
+  // Goal
+  const annualNow=(months[0].rProfit+months[0].lProfit+months[0].w2)*12;
+  const annualM3=annualized;
+  const gap500k=500000-annualM3;
+  const goalEl=document.getElementById('goal-text');
+  if(gap500k<=0){
+    goalEl.innerHTML=`🎉 <strong>You're already at a $${Math.round(annualM3).toLocaleString()} run rate!</strong> That's above $500K. Time to think about quitting the W2.`;
+  } else {
+    const monthlyGap=Math.round(gap500k/12);
+    goalEl.innerHTML=`Current annual run rate: <strong>$${Math.round(annualNow).toLocaleString()}</strong> → Month 3 projected: <strong>$${Math.round(annualM3).toLocaleString()}</strong><br><br>
+    Gap to $500K: <strong class="negative">$${Math.round(gap500k).toLocaleString()}/yr</strong> ($${monthlyGap.toLocaleString()}/mo more needed)<br><br>
+    💡 To close the gap: Rover to $${Math.round((500000/12-w2-months[2].lProfit)/rMar).toLocaleString()}/mo revenue, OR scale Lunouri to $${Math.round((500000/12-w2-months[2].rProfit)/lMar).toLocaleString()}/mo revenue, OR a mix of both.`;
+  }
+
+  // Chart
+  drawChart(months);
+  document.getElementById('results').classList.remove('hidden');
+}
+
+function drawChart(months){
+  const canvas=document.getElementById('chart');
+  const ctx=canvas.getContext('2d');
+  const dpr=window.devicePixelRatio||1;
+  const rect=canvas.parentElement.getBoundingClientRect();
+  canvas.width=rect.width*dpr-40*dpr;
+  canvas.height=300*dpr;
+  canvas.style.width=(rect.width-40)+'px';
+  canvas.style.height='300px';
+  ctx.scale(dpr,dpr);
+  const W=rect.width-40,H=300;
+  ctx.clearRect(0,0,W,H);
+
+  // Data: weekly interpolation
+  let points=[];
+  for(let m of months){
+    for(let w=0;w<4;w++){
+      const weekCum=m.cumulative*(w+1)/4-(m.m>1?months[m.m-2].cumulative:0)*(1-(w+1)/4)+(m.m>1?months[m.m-2].cumulative:0);
+      points.push(weekCum);
+    }
+  }
+  // Simpler: just use 3 month points with 0 start
+  points=[0,months[0].cumulative,months[1].cumulative,months[2].cumulative];
+
+  const maxV=Math.max(...points.map(Math.abs),1);
+  const pad={t:20,r:20,b:30,l:60};
+  const cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
+
+  // Grid
+  ctx.strokeStyle='#2a2d3a';ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){
+    const y=pad.t+cH*i/4;
+    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();
+    ctx.fillStyle='#71717a';ctx.font='11px sans-serif';ctx.textAlign='right';
+    const val=maxV*1.1-maxV*2.2*i/4;
+    ctx.fillText('$'+Math.round(val).toLocaleString(),pad.l-8,y+4);
+  }
+
+  // Line
+  const scaleY=v=>pad.t+cH/2-(v/(maxV*1.1))*cH/2;
+  ctx.beginPath();ctx.strokeStyle=var_='#3b82f6';ctx.lineWidth=3;
+  points.forEach((p,i)=>{
+    const x=pad.l+i/(points.length-1)*cW;
+    const y=scaleY(p);
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+
+  // Dots
+  points.forEach((p,i)=>{
+    const x=pad.l+i/(points.length-1)*cW;
+    const y=scaleY(p);
+    ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fillStyle=p>=0?'#22c55e':'#ef4444';ctx.fill();
+    ctx.fillStyle='#e4e4e7';ctx.font='bold 11px sans-serif';ctx.textAlign='center';
+    ctx.fillText('$'+Math.round(p).toLocaleString(),x,y-12);
+  });
+
+  // X labels
+  ctx.fillStyle='#71717a';ctx.font='11px sans-serif';ctx.textAlign='center';
+  ['Now','Month 1','Month 2','Month 3'].forEach((l,i)=>{
+    ctx.fillText(l,pad.l+i/(points.length-1)*cW,H-8);
+  });
+
+  // Zero line
+  const zeroY=scaleY(0);
+  ctx.strokeStyle='#71717a';ctx.lineWidth=1;ctx.setLineDash([4,4]);
+  ctx.beginPath();ctx.moveTo(pad.l,zeroY);ctx.lineTo(W-pad.r,zeroY);ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+// Init
+renderExpenses();renderOneTime();
+// Restore saved values
+['rover-rev','rover-growth','rover-margin','lunouri-rev','lunouri-growth','lunouri-margin','w2-pay'].forEach(id=>{
+  const saved=localStorage.getItem('cf-'+id);
+  if(saved)document.getElementById(id).value=saved;
+});
+</script>
+</body>
+</html>
