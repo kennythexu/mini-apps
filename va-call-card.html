@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Rover VA Call Card</title>
+<title>Rover VA Call Card v4</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -15,18 +15,25 @@
   --orange:#ea580c;--orange-bg:#ffedd5;--orange-border:#fdba74;
   --gray:#64748b;--gray-bg:#f1f5f9;--gray-border:#cbd5e1;
   --highlight-bg:#eff6ff;--highlight-border:#3b82f6;
+  --purple:#7c3aed;--purple-bg:#f5f3ff;--purple-border:#c4b5fd;
 }
-html,body{height:100%;overflow:hidden;font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#1e293b;font-size:11.5px;line-height:1.3}
+html,body{height:100%;overflow:auto;font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#1e293b;font-size:13px;line-height:1.4}
 .tabs{display:flex;justify-content:center;gap:4px;padding:4px 0;background:#fff;border-bottom:2px solid #e2e8f0;position:sticky;top:0;z-index:10}
 .tab{padding:6px 32px;font-size:13px;font-weight:700;border:2px solid #e2e8f0;border-radius:6px 6px 0 0;cursor:pointer;background:#f1f5f9;color:#64748b;letter-spacing:.5px;transition:all .15s}
 .tab.active{background:#fff;color:#1e293b;border-bottom-color:#fff;position:relative;top:2px}
 .tab:hover:not(.active){background:#e2e8f0}
-.view{display:none;height:calc(100vh - 82px);overflow:hidden;padding:4px 8px 0}
+.view{display:none;min-height:calc(100vh - 82px);overflow:visible;padding:4px 8px 0;padding-bottom:160px}
 .view.active{display:flex;flex-direction:column;align-items:center}
-.tree{flex:1;display:flex;flex-direction:column;align-items:center;width:100%;min-width:0;overflow:hidden}
+.tree{flex:1;display:flex;flex-direction:column;align-items:center;width:100%;min-width:0;overflow:visible}
+
+/* Read the Room banner */
+.read-room{background:#fef3c7;border:1px solid #fde68a;border-radius:4px;padding:2px 10px;font-size:10px;color:#92400e;text-align:center;margin-bottom:2px;width:auto;display:inline-block}
+
+/* Time markers */
+.time-marker{font-size:9px;color:#94a3b8;font-weight:600;margin:0 auto;text-align:center;letter-spacing:.3px}
 
 /* Nodes */
-.node{border-radius:6px;padding:5px 10px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.1);position:relative;max-width:340px;width:100%}
+.node{border-radius:6px;padding:8px 14px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.1);position:relative;max-width:600px;width:100%}
 .node.green{background:var(--green-bg);border:2px solid var(--green-border);color:var(--green)}
 .node.blue{background:var(--blue-bg);border:2px solid var(--blue-border);color:var(--blue)}
 .node.blue-light{background:var(--blue-light-bg);border:2px solid var(--blue-light-border);color:var(--blue-light)}
@@ -35,13 +42,21 @@ html,body{height:100%;overflow:hidden;font-family:system-ui,-apple-system,sans-s
 .node.orange{background:var(--orange-bg);border:2px solid var(--orange-border);color:var(--orange)}
 .node.gray{background:var(--gray-bg);border:2px solid var(--gray-border);color:var(--gray)}
 .node.highlight{background:var(--highlight-bg);border:2px solid var(--highlight-border);color:var(--blue)}
+.node.purple{background:var(--purple-bg);border:2px solid var(--purple-border);color:var(--purple)}
 .node b{font-size:10px;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:1px}
 .node .script{font-style:italic;font-size:11px}
 .node .action{font-weight:600;font-size:10.5px}
 .node ul{text-align:left;padding-left:14px;margin:2px 0}
 .node li{margin:0}
-.node.sm{max-width:160px;padding:4px 6px;font-size:10.5px}
+.node.sm{max-width:220px;padding:6px 10px;font-size:11.5px}
 .node.sm .script{font-size:10px}
+.node.md{max-width:240px;padding:8px 12px;font-size:12.5px}
+.node.md .script{font-size:11px}
+.node.md .action{font-size:11px}
+.node.md b{font-size:11px}
+
+/* Close-again loop */
+.close-loop{font-size:9.5px;color:var(--green);font-weight:700;margin-top:2px;padding-top:1px;border-top:1px dashed var(--green-border)}
 
 /* Connector lines */
 .vline{width:2px;background:#94a3b8;margin:0 auto;flex-shrink:0}
@@ -50,23 +65,23 @@ html,body{height:100%;overflow:hidden;font-family:system-ui,-apple-system,sans-s
 .arrow-down{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid #94a3b8;margin:0 auto}
 
 /* Branch containers */
-.branch-row{display:flex;justify-content:center;gap:6px;position:relative;width:100%}
-.branch-row::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);height:2px;background:#94a3b8}
-.branch{display:flex;flex-direction:column;align-items:center;flex:1;max-width:170px;min-width:0}
+.branch-row{display:flex;justify-content:center;gap:10px;position:relative;width:100%;padding-top:2px}
+.branch-row::before{content:'';position:absolute;top:0;height:2px;background:#94a3b8;left:var(--bar-left,25%);right:var(--bar-right,25%)}
+.branch{display:flex;flex-direction:column;align-items:center;flex:1;max-width:380px;min-width:0}
 .branch .vline{height:8px}
 
-/* Horizontal connector bar */
-.hbar{height:2px;background:#94a3b8;position:relative;margin:0 auto}
+/* Trust sidebar */
+.trust-strip{position:absolute;right:4px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:1px;font-size:9px;color:#475569;text-align:left;background:rgba(255,255,255,.85);border-radius:4px;padding:3px 5px;border:1px solid #e2e8f0}
+.trust-strip span{white-space:nowrap}
 
 /* Bottom strip */
-.bottom-strip{width:100%;background:#fff;border-top:2px solid #e2e8f0;display:flex;gap:0;font-size:10px;padding:0;flex-shrink:0;position:fixed;bottom:0;left:0;z-index:10}
-.strip-section{flex:1;padding:4px 10px;border-right:1px solid #e2e8f0}
+.bottom-strip{width:100%;background:#fff;border-top:2px solid #e2e8f0;display:flex;flex-direction:column;gap:0;font-size:10px;padding:0;flex-shrink:0;position:fixed;bottom:0;left:0;z-index:10}
+.strip-row{display:flex;gap:0}
+.strip-section{flex:1;padding:4px 10px;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0}
 .strip-section:last-child{border-right:none}
 .strip-section b{display:block;margin-bottom:1px;font-size:10px;color:#475569}
 .strip-section .num{color:#1e293b;font-weight:500}
-.tooltip-wrap{position:relative;cursor:help;text-decoration:underline dotted;color:var(--blue)}
-.tooltip-wrap .tt{display:none;position:absolute;bottom:100%;left:0;background:#1e293b;color:#fff;padding:6px 8px;border-radius:4px;font-size:10px;white-space:pre-line;width:260px;z-index:20;box-shadow:0 4px 12px rgba(0,0,0,.2)}
-.tooltip-wrap:hover .tt{display:block}
+.strip-section .tpl{font-size:9.5px;color:#334155;line-height:1.25;margin-top:1px}
 
 /* Inbound specific layout */
 #inbound .tree{gap:0}
@@ -74,12 +89,6 @@ html,body{height:100%;overflow:hidden;font-family:system-ui,-apple-system,sans-s
 
 /* Outbound layout */
 #outbound .tree{gap:0}
-.split-row{display:flex;justify-content:center;gap:40px;width:100%;position:relative}
-.split-row::before{content:'';position:absolute;top:0;height:2px;background:#94a3b8}
-.split-col{display:flex;flex-direction:column;align-items:center}
-
-/* Shared explain-price-close */
-.shared-block{display:flex;flex-direction:column;align-items:center;gap:0}
 </style>
 </head>
 <body>
@@ -91,86 +100,107 @@ html,body{height:100%;overflow:hidden;font-family:system-ui,-apple-system,sans-s
 
 <!-- ==================== INBOUND ==================== -->
 <div id="inbound" class="view active">
-<div class="tree">
+<div class="tree" style="position:relative">
+
+  <!-- Read the Room banner -->
+  <div class="read-room">⏸️ If they share something personal — STOP the script and listen. Be human first.</div>
+
+  <!-- Trust builders sidebar -->
+  <div class="trust-strip" style="top:45%;right:6px;transform:translateY(-50%)">
+    <b style="font-size:8.5px;color:#64748b;margin-bottom:1px">DROP-IN TRUST</b>
+    <span>⭐ "Five-star rated on Google"</span>
+    <span>🔒 "Insured, bonded, background-checked"</span>
+    <span>💰 "Flat-rate — no surprises"</span>
+    <span>📋 "No contracts — cancel anytime"</span>
+    <span>🧹 "We bring all supplies"</span>
+  </div>
 
   <!-- Greeting -->
-  <div class="node green" style="max-width:380px">
+  <div class="node green" style="max-width:550px">
     <b>Greeting</b>
     <div class="script">"Hey! Thanks for calling Rover — you've got [name]!"</div>
     <div class="script">"Who am I speaking with?" · "How's your [day] going, [name]?"</div>
   </div>
+  <div class="time-marker">~30 sec</div>
   <div class="vline short"></div><div class="arrow-down"></div>
 
   <!-- Open -->
-  <div class="node green" style="max-width:320px">
+  <div class="node green" style="max-width:700px">
     <div class="script">"So [name], what can I help you with?"</div>
   </div>
   <div class="vline short"></div>
 
-  <!-- 4-way branch bar -->
-  <div style="width:680px;height:2px;background:#94a3b8;margin:0 auto"></div>
-  <div class="branch-row" style="width:700px">
+  <!-- 4-way branch -->
+  <div class="branch-row" style="width:90%;max-width:1120px;--bar-left:10%;--bar-right:10%">
     <div class="branch">
-      <div class="vline" style="height:6px"></div>
-      <div class="node blue-light sm">
+      <div class="node blue-light md">
         <b>"How much?"</b>
         <div class="action">→ Don't quote yet!</div>
         <div class="script">"Mind if I ask a few Qs?"</div>
       </div>
     </div>
     <div class="branch">
-      <div class="vline" style="height:6px"></div>
-      <div class="node blue-light sm">
+      <div class="node blue-light md">
         <b>Describes situation</b>
         <div class="action">→ MIRROR it back</div>
         <div class="script">"Sounds like you have a lot going on"</div>
       </div>
     </div>
     <div class="branch">
-      <div class="vline" style="height:6px"></div>
-      <div class="node blue-light sm">
+      <div class="node blue-light md">
         <b>"How does it work?"</b>
         <div class="action">→ Brief answer</div>
         <div class="action">→ Redirect to discovery</div>
       </div>
     </div>
     <div class="branch">
-      <div class="vline" style="height:6px"></div>
-      <div class="node blue-light sm">
+      <div class="node blue-light md">
         <b>Vague / "just looking"</b>
         <div class="script">"What's got you thinking about cleaning?"</div>
       </div>
     </div>
   </div>
-  <div style="width:680px;height:2px;background:#94a3b8;margin:0 auto"></div>
   <div class="vline short"></div><div class="arrow-down"></div>
 
   <!-- Discovery -->
-  <div class="node blue" style="max-width:420px">
+  <div class="node blue" style="max-width:650px">
     <b>Discovery — "Tell me about your place"</b>
-    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;font-size:10.5px;font-weight:600">
-      <span>☐ Type (std/deep/move)</span><span>☐ Beds/baths</span><span>☐ Sqft</span><span>☐ Condition</span><span>☐ Pets</span><span>☐ Day</span><span>☐ City</span><span>☐ Name + email</span>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px 10px;font-size:10.5px;text-align:left;padding:0 4px">
+      <span>☐ <i>"What kind of clean — regular or one-time?"</i></span>
+      <span>☐ <i>"How many bedrooms and bathrooms?"</i></span>
+      <span>☐ <i>"Roughly how big is the place?"</i></span>
+      <span>☐ <i>"How would you describe it right now?"</i></span>
+      <span>☐ <i>"Any furry friends?"</i></span>
+      <span>☐ <i>"What day works best?"</i></span>
+      <span>☐ <i>"What area are you in?"</i></span>
+      <span>☐ Name + email</span>
     </div>
   </div>
+  <div class="time-marker">~3 min</div>
   <div class="vline short"></div><div class="arrow-down"></div>
 
   <!-- Emotional Hook -->
-  <div class="node highlight" style="max-width:420px">
+  <div class="node highlight" style="max-width:700px">
     <b>💡 Emotional Hook — connect their WHY</b>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px 12px;font-size:10.5px;text-align:left;padding:0 8px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px 12px;font-size:10.5px;text-align:left;padding:0 4px">
       <span><b style="display:inline;font-size:inherit">Moving →</b> "Spotless before you unpack"</span>
-      <span><b style="display:inline;font-size:inherit">Busy →</b> "Give you [X]hrs back every week"</span>
+      <span><b style="display:inline;font-size:inherit">Busy/kids →</b> "Give you [X]hrs back every week"</span>
       <span><b style="display:inline;font-size:inherit">Event →</b> "Perfect by [date]"</span>
+      <span><b style="display:inline;font-size:inherit">Airbnb →</b> "Keep those 5-star reviews coming"</span>
+      <span><b style="display:inline;font-size:inherit">New baby →</b> "One less thing while you adjust"</span>
+      <span><b style="display:inline;font-size:inherit">Elderly parent →</b> "Make sure their place is taken care of"</span>
+      <span><b style="display:inline;font-size:inherit">Health →</b> "A deep clean can really help with that"</span>
       <span><b style="display:inline;font-size:inherit">General →</b> "One less thing to worry about"</span>
     </div>
   </div>
   <div class="vline short"></div><div class="arrow-down"></div>
 
   <!-- Explain -->
-  <div class="node yellow" style="max-width:400px">
+  <div class="node yellow" style="max-width:580px">
     <b>Explain (15 sec — don't list tasks)</b>
     <div class="script">"Team of two, [X] hours, top-to-bottom — kitchen, bathrooms, floors, dusting. We bring everything."</div>
   </div>
+  <div class="time-marker">~4 min</div>
   <div class="vline short"></div><div class="arrow-down"></div>
 
   <!-- Price -->
@@ -179,13 +209,12 @@ html,body{height:100%;overflow:hidden;font-family:system-ui,-apple-system,sans-s
     <div class="script">"$[X] after tax. [X]hrs, 2 cleaners."</div>
     <div class="action" style="color:var(--red)">→ PAUSE. Count to 3. ⏸️</div>
   </div>
+  <div class="time-marker">~5 min</div>
   <div class="vline short"></div>
 
-  <!-- 4-way objection branch -->
-  <div style="width:700px;height:2px;background:#94a3b8;margin:0 auto"></div>
-  <div class="branch-row" style="width:720px">
+  <!-- 5-way objection branch -->
+  <div class="branch-row" style="width:95%;max-width:1220px;--bar-left:8%;--bar-right:8%">
     <div class="branch">
-      <div class="vline" style="height:6px"></div>
       <div class="node green sm">
         <b>👍 Positive</b>
         <div class="action">→ "We've got openings this wk — want me to check [day]?"</div>
@@ -193,192 +222,298 @@ html,body{height:100%;overflow:hidden;font-family:system-ui,-apple-system,sans-s
       </div>
     </div>
     <div class="branch">
-      <div class="vline" style="height:6px"></div>
       <div class="node orange sm">
-        <b>😐 Hesitation / Silence</b>
+        <b>😐 Hesitation</b>
         <div class="script">"Sounds like you have some concerns…"</div>
         <div class="action">→ Let them tell you</div>
+        <div class="close-loop">→ "So shall I check [day] for you?"</div>
       </div>
     </div>
     <div class="branch">
-      <div class="vline" style="height:6px"></div>
       <div class="node red sm">
         <b>💰 "Too expensive"</b>
         <div class="script">"What were you hoping to spend?"</div>
         <div class="action">→ Adjust scope</div>
         <div class="action">→ "Book today → $[X] off"</div>
-        <div class="action">→ Still no: "Text the quote"</div>
+        <div class="close-loop">→ "So shall I check [day] for you?"</div>
       </div>
     </div>
     <div class="branch">
-      <div class="vline" style="height:6px"></div>
       <div class="node red sm">
         <b>🤔 "Need to think"</b>
         <div class="script">"Price or timing?"</div>
         <div class="action">→ Price: discount</div>
         <div class="action">→ Timing: flex schedule</div>
-        <div class="action">→ Spouse: "Text you a summary?"</div>
-        <div class="action">→ "Text the quote"</div>
+        <div class="action">→ Spouse: "Text summary?"</div>
+        <div class="close-loop">→ "So shall I check [day] for you?"</div>
+      </div>
+    </div>
+    <div class="branch">
+      <div class="node gray sm">
+        <b>📞 Hung up</b>
+        <div class="action">→ Text within 5 min:</div>
+        <div class="script" style="font-size:9.5px">"Hey [Name], looks like we got disconnected! Here's your quote: [details]. Call [number] or reply here to book!"</div>
       </div>
     </div>
   </div>
-  <div style="width:700px;height:2px;background:#94a3b8;margin:0 auto"></div>
   <div class="vline short"></div><div class="arrow-down"></div>
 
   <!-- Wrap Up -->
-  <div class="node green" style="max-width:380px">
+  <div class="node green" style="max-width:550px">
     <b>Wrap Up</b>
     <div class="action">✅ Booked → confirm date / address / email</div>
     <div class="action">✅ Not booked → "I'll text you everything"</div>
     <div class="script">"Thanks so much, [name]!"</div>
   </div>
+  <div class="time-marker">⏱️ Booked calls average 7.5 min — take your time</div>
 
 </div>
 </div>
 
 <!-- ==================== OUTBOUND ==================== -->
 <div id="outbound" class="view">
-<div class="tree">
+<div class="tree" style="position:relative">
+
+  <!-- Read the Room banner -->
+  <div class="read-room">⏸️ If they share something personal — STOP the script and listen. Be human first.</div>
+
+  <!-- Trust builders sidebar -->
+  <div class="trust-strip" style="top:40%;right:6px;transform:translateY(-50%)">
+    <b style="font-size:8.5px;color:#64748b;margin-bottom:1px">DROP-IN TRUST</b>
+    <span>⭐ "Five-star rated on Google"</span>
+    <span>🔒 "Insured, bonded, background-checked"</span>
+    <span>💰 "Flat-rate — no surprises"</span>
+    <span>📋 "No contracts — cancel anytime"</span>
+    <span>🧹 "We bring all supplies"</span>
+  </div>
 
   <!-- Call -->
-  <div class="node gray" style="max-width:260px">
+  <div class="node gray" style="max-width:550px">
     <b>Call [Name]</b>
   </div>
   <div class="vline short"></div>
-  <div style="width:500px;height:2px;background:#94a3b8;margin:0 auto"></div>
 
-  <div style="display:flex;justify-content:center;gap:60px;width:600px">
+  <div class="branch-row" style="width:90%;max-width:720px;--bar-left:15%;--bar-right:15%">
     <!-- NO ANSWER branch -->
-    <div style="display:flex;flex-direction:column;align-items:center">
-      <div class="vline" style="height:8px"></div>
-      <div class="node gray sm" style="max-width:180px">
+    <div class="branch" style="max-width:300px">
+      <div class="node gray md" style="max-width:280px">
         <b>❌ No Answer</b>
         <div class="action">→ Voicemail (see below)</div>
         <div class="action">→ Text follow-up</div>
-        <div style="font-size:9.5px;margin-top:2px;color:#475569"><b style="display:inline;font-size:inherit">Cadence:</b> D1:call · D3:call · D5:text · D7:final</div>
+        <div style="font-size:11px;margin-top:2px;color:#475569"><b style="display:inline;font-size:inherit">Cadence:</b> D1:call · D3:call · D5:text · D7:final</div>
       </div>
     </div>
 
     <!-- ANSWERED branch -->
-    <div style="display:flex;flex-direction:column;align-items:center">
-      <div class="vline" style="height:8px"></div>
-      <div class="node green" style="max-width:300px">
+    <div class="branch" style="max-width:380px">
+      <div class="node green md" style="max-width:380px">
         <b>✅ Answered</b>
-        <div class="script">"Hi [Name]! This is [name] from Rover House Cleaners!"</div>
-        <div class="action">(SLOW AND CLEAR) · "Is now a good time?"</div>
-      </div>
-      <div class="vline short"></div>
-      <div style="width:300px;height:2px;background:#94a3b8;margin:0 auto"></div>
-
-      <div style="display:flex;justify-content:center;gap:20px;width:320px">
-        <!-- Bad time -->
-        <div style="display:flex;flex-direction:column;align-items:center;flex:1">
-          <div class="vline" style="height:6px"></div>
-          <div class="node gray sm" style="max-width:130px">
-            <b>"No / bad time"</b>
-            <div class="script">"When's better?"</div>
-            <div class="action">→ Note & END</div>
-          </div>
-        </div>
-        <!-- Good time -->
-        <div style="display:flex;flex-direction:column;align-items:center;flex:1">
-          <div class="vline" style="height:6px"></div>
-          <div class="node green sm" style="max-width:130px">
-            <b>"Sure / Yeah"</b>
-          </div>
-          <div class="vline short"></div>
-          <div style="width:260px;height:2px;background:#94a3b8;margin:0 auto"></div>
-
-          <div style="display:flex;justify-content:center;gap:10px;width:280px">
-            <!-- Quote form lead -->
-            <div style="display:flex;flex-direction:column;align-items:center;flex:1">
-              <div class="vline" style="height:6px"></div>
-              <div class="node blue-light sm" style="max-width:130px">
-                <b>Quote Form Lead</b>
-                <div class="script">"You submitted a quote request — I'd love to help!"</div>
-                <div class="script">"What kind of clean?"</div>
-              </div>
-            </div>
-            <!-- Ad lead -->
-            <div style="display:flex;flex-direction:column;align-items:center;flex:1">
-              <div class="vline" style="height:6px"></div>
-              <div class="node blue-light sm" style="max-width:130px">
-                <b>FB / Ad Lead</b>
-                <div class="script">"You may have seen us on [Facebook] — we're 5-star in [area]."</div>
-                <div class="script">"Still thinking about cleaning?"</div>
-              </div>
-              <div class="vline short"></div>
-              <div style="width:200px;height:2px;background:#94a3b8;margin:0 auto"></div>
-              <div style="display:flex;gap:6px;width:210px">
-                <div style="display:flex;flex-direction:column;align-items:center;flex:1">
-                  <div class="vline" style="height:4px"></div>
-                  <div class="node green sm" style="max-width:65px;padding:3px 4px;font-size:9.5px">
-                    <b style="font-size:8.5px">Engages</b>
-                    <div class="action">→ Discovery ↓</div>
-                  </div>
-                </div>
-                <div style="display:flex;flex-direction:column;align-items:center;flex:1">
-                  <div class="vline" style="height:4px"></div>
-                  <div class="node gray sm" style="max-width:65px;padding:3px 4px;font-size:9.5px">
-                    <b style="font-size:8.5px">Not interested</b>
-                    <div class="action">→ "Running special. Text details?"</div>
-                  </div>
-                </div>
-                <div style="display:flex;flex-direction:column;align-items:center;flex:1">
-                  <div class="vline" style="height:4px"></div>
-                  <div class="node orange sm" style="max-width:65px;padding:3px 4px;font-size:9.5px">
-                    <b style="font-size:8.5px">"How much?"</b>
-                    <div class="action">→ "Depends on home — 2-3 quick Qs?"</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div style="width:260px;height:2px;background:#94a3b8;margin:4px auto 0"></div>
-          <div class="vline short"></div><div class="arrow-down"></div>
-
-          <!-- Outbound Discovery -->
-          <div class="node blue" style="max-width:340px">
-            <b>Outbound Discovery</b>
-            <div class="script">"What's going on — regular thing or one-time deal?"</div>
-            <div class="action">→ Let them talk. MIRROR back.</div>
-            <div class="action">→ Beds/baths, sqft, condition</div>
-            <div class="script">"What made you think about getting help with cleaning?"</div>
-            <div class="action">→ 💡 EMOTIONAL HOOK</div>
-          </div>
-          <div class="vline short"></div><div class="arrow-down"></div>
-
-          <!-- Shared Explain/Price/Close -->
-          <div class="node yellow" style="max-width:320px">
-            <b>Explain → Price → Close</b>
-            <div class="action">Same as inbound: Explain (15s) → Price + PAUSE → Handle objections → Book or text quote</div>
-          </div>
-        </div>
+        <div class="script">"Hey [Name]! It's [name] from Rover — I'm calling about the cleaning discount you signed up for."</div>
+        <div class="action">(SLOW AND CLEAR — say your name like they know you)</div>
       </div>
     </div>
   </div>
+  <div class="vline short"></div>
+  <div class="time-marker">~30 sec</div>
+  <div class="vline short"></div>
+
+  <!-- Good time / Bad time -->
+  <div class="branch-row" style="width:90%;max-width:720px;--bar-left:15%;--bar-right:15%">
+    <div class="branch" style="max-width:240px">
+      <div class="node gray md" style="max-width:240px">
+        <b>"No / bad time"</b>
+        <div class="script">"When's better?"</div>
+        <div class="action">→ Note callback time & END</div>
+      </div>
+    </div>
+    <div class="branch" style="max-width:240px">
+      <div class="node green md" style="max-width:240px">
+        <b>"Sure / Yeah"</b>
+        <div class="script">"I just need a few details to get your 25% off quote ready."</div>
+      </div>
+    </div>
+  </div>
+  <div class="vline short"></div><div class="arrow-down"></div>
+
+  <!-- Lead Type Opener -->
+  <div class="branch-row" style="width:90%;max-width:920px;--bar-left:15%;--bar-right:15%">
+    <div class="branch" style="max-width:280px">
+      <div class="node blue-light md" style="max-width:280px">
+        <b>Quote Form Lead</b>
+        <div class="script">"You submitted a quote request — let me get your discount quote ready!"</div>
+        <div class="script">"How many bedrooms and bathrooms?"</div>
+      </div>
+    </div>
+    <div class="branch" style="max-width:280px">
+      <div class="node blue-light md" style="max-width:280px">
+        <b>FB / Ad Lead (99% of calls)</b>
+        <div class="script">"You signed up for our 25% off first cleaning special!"</div>
+        <div class="script">"I just need a couple details — how many bedrooms and bathrooms?"</div>
+      </div>
+    </div>
+  </div>
+  <div class="vline short"></div>
+
+  <!-- FB Lead response row -->
+  <div class="branch-row" style="width:90%;max-width:820px;--bar-left:10%;--bar-right:10%">
+    <div class="branch" style="max-width:220px">
+      <div class="node green sm" style="max-width:220px">
+        <b>Engages</b>
+        <div class="action">→ Discovery ↓</div>
+      </div>
+    </div>
+    <div class="branch" style="max-width:220px">
+      <div class="node gray sm" style="max-width:220px">
+        <b>Don't remember / Not interested</b>
+        <div class="script">"No worries! You saw our ad — 25% off your first clean this month. Can I text you the details?"</div>
+      </div>
+    </div>
+    <div class="branch" style="max-width:220px">
+      <div class="node orange sm" style="max-width:220px">
+        <b>"How much?"</b>
+        <div class="script">"It depends on the home — mind if I ask 2-3 quick questions?"</div>
+        <div class="action">→ Discovery ↓</div>
+      </div>
+    </div>
+  </div>
+  <div class="vline short"></div><div class="arrow-down"></div>
+
+  <!-- Outbound Discovery -->
+  <div class="node blue" style="max-width:650px">
+    <b>Outbound Discovery — "Tell me about your place"</b>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px 10px;font-size:10.5px;text-align:left;padding:0 4px">
+      <span>☐ <i>"What kind of clean — regular or one-time?"</i></span>
+      <span>☐ <i>"How many bedrooms and bathrooms?"</i></span>
+      <span>☐ <i>"Roughly how big is the place?"</i></span>
+      <span>☐ <i>"How would you describe it right now?"</i></span>
+      <span>☐ <i>"Any furry friends?"</i></span>
+      <span>☐ <i>"What day works best?"</i></span>
+      <span>☐ <i>"What area are you in?"</i></span>
+      <span>☐ Name + email</span>
+    </div>
+    <div class="action" style="margin-top:2px">→ 💡 WHY: "What made you think about getting help with cleaning?"</div>
+  </div>
+  <div class="time-marker">~3 min</div>
+  <div class="vline short"></div><div class="arrow-down"></div>
+
+  <!-- Emotional Hook -->
+  <div class="node highlight" style="max-width:700px">
+    <b>💡 Emotional Hook — connect their WHY</b>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px 12px;font-size:10.5px;text-align:left;padding:0 4px">
+      <span><b style="display:inline;font-size:inherit">Moving →</b> "Spotless before you unpack"</span>
+      <span><b style="display:inline;font-size:inherit">Busy/kids →</b> "Give you [X]hrs back every week"</span>
+      <span><b style="display:inline;font-size:inherit">Event →</b> "Perfect by [date]"</span>
+      <span><b style="display:inline;font-size:inherit">Airbnb →</b> "Keep those 5-star reviews coming"</span>
+      <span><b style="display:inline;font-size:inherit">New baby →</b> "One less thing while you adjust"</span>
+      <span><b style="display:inline;font-size:inherit">Elderly parent →</b> "Make sure their place is taken care of"</span>
+      <span><b style="display:inline;font-size:inherit">Health →</b> "A deep clean can really help with that"</span>
+      <span><b style="display:inline;font-size:inherit">General →</b> "One less thing to worry about"</span>
+    </div>
+  </div>
+  <div class="vline short"></div><div class="arrow-down"></div>
+
+  <!-- Explain -->
+  <div class="node yellow" style="max-width:580px">
+    <b>Explain (15 sec — don't list tasks)</b>
+    <div class="script">"Team of two, [X] hours, top-to-bottom — kitchen, bathrooms, floors, dusting. We bring everything."</div>
+  </div>
+  <div class="time-marker">~4 min</div>
+  <div class="vline short"></div><div class="arrow-down"></div>
+
+  <!-- Price -->
+  <div class="node yellow" style="max-width:340px">
+    <b>Price</b>
+    <div class="script">"$[X] after tax. [X]hrs, 2 cleaners."</div>
+    <div class="action" style="color:var(--red)">→ PAUSE. Count to 3. ⏸️</div>
+  </div>
+  <div class="time-marker">~5 min</div>
+  <div class="vline short"></div>
+
+  <!-- 5-way objection branch -->
+  <div class="branch-row" style="width:95%;max-width:1220px;--bar-left:8%;--bar-right:8%">
+    <div class="branch">
+      <div class="node green sm">
+        <b>👍 Positive</b>
+        <div class="action">→ "We've got openings this wk — want me to check [day]?"</div>
+        <div class="action" style="color:var(--green);font-size:11.5px;margin-top:2px">→ BOOK! ✅</div>
+      </div>
+    </div>
+    <div class="branch">
+      <div class="node orange sm">
+        <b>😐 Hesitation</b>
+        <div class="script">"Sounds like you have some concerns…"</div>
+        <div class="action">→ Let them tell you</div>
+        <div class="close-loop">→ "So shall I check [day] for you?"</div>
+      </div>
+    </div>
+    <div class="branch">
+      <div class="node red sm">
+        <b>💰 "Too expensive"</b>
+        <div class="script">"What were you hoping to spend?"</div>
+        <div class="action">→ Adjust scope</div>
+        <div class="action">→ "Book today → $[X] off"</div>
+        <div class="action">→ Still no: "Text the quote"</div>
+        <div class="close-loop">→ "So shall I check [day] for you?"</div>
+      </div>
+    </div>
+    <div class="branch">
+      <div class="node red sm">
+        <b>🤔 "Need to think"</b>
+        <div class="script">"Price or timing?"</div>
+        <div class="action">→ Price: discount</div>
+        <div class="action">→ Timing: flex schedule</div>
+        <div class="action">→ Spouse: "Text summary?"</div>
+        <div class="close-loop">→ "So shall I check [day] for you?"</div>
+      </div>
+    </div>
+    <div class="branch">
+      <div class="node gray sm">
+        <b>📞 Hung up</b>
+        <div class="action">→ Text within 5 min:</div>
+        <div class="script">"Hey [Name], looks like we got disconnected! Here's your quote: [details]. Call [number] or reply here to book!"</div>
+      </div>
+    </div>
+  </div>
+  <div class="vline short"></div><div class="arrow-down"></div>
+
+  <!-- Wrap Up -->
+  <div class="node green" style="max-width:550px">
+    <b>Wrap Up</b>
+    <div class="action">✅ Booked → confirm date / address / email</div>
+    <div class="action">✅ Not booked → "I'll text you everything"</div>
+    <div class="script">"Thanks so much, [name]!"</div>
+  </div>
+  <div class="time-marker">⏱️ Booked calls average 7.5 min — take your time</div>
 
 </div>
 </div>
 
 <!-- ==================== BOTTOM STRIP ==================== -->
 <div class="bottom-strip">
-  <div class="strip-section">
-    <b>📞 Numbers</b>
-    <div class="num">Quo: Dallas (214) 396-6466 · FW (817) 562-7254 · Chicago (872) 326-3320</div>
-    <div class="num">GHL: Dallas (214) 833-7268 · Chicago (872) 217-9517</div>
+  <div class="strip-row">
+    <div class="strip-section">
+      <b>📞 Give the number matching their city:</b>
+      <div class="num"><b>DFW:</b> Quo (214) 396-6466 · GHL (214) 833-7268</div>
+      <div class="num"><b>Fort Worth:</b> Quo (817) 562-7254</div>
+      <div class="num"><b>Chicago:</b> Quo (872) 326-3320 · GHL (872) 217-9517</div>
+    </div>
+    <div class="strip-section">
+      <b>🎤 Voicemail (20s)</b>
+      <div>"Hey [Name]! It's [name] from Rover — calling about your 25% off cleaning discount! I'd love to get your quote ready. Call me back at [number] or I'll text you. Talk soon!"</div>
+    </div>
   </div>
-  <div class="strip-section">
-    <b>🎤 Voicemail (20s)</b>
-    <div>"Hi [Name]! [Name] from Rover House Cleaners. Calling about your cleaning quote. Five-star rated, love to help! Call [number] or I'll text you. Have a great day!"</div>
-  </div>
-  <div class="strip-section">
-    <b>📱 Text Templates</b>
-    <div>
-      <span class="tooltip-wrap">VM follow-up<span class="tt">Hey [Name]! Just tried calling — this is [name] from Rover House Cleaners. We're 5-star rated and would love to help with your cleaning. Let me know if you have any questions! 😊</span></span> · 
-      <span class="tooltip-wrap">Post-call quote<span class="tt">Hey [Name]! Great chatting with you! Here's your quote:\n\n🏠 [Type] Clean\n💰 $[X] (incl. tax)\n👥 Team of 2, [X] hours\n📅 [Day]\n\nReady to book? Just reply YES!</span></span> · 
-      <span class="tooltip-wrap">2-day follow-up<span class="tt">Hey [Name]! Just following up on your cleaning quote. We still have availability this week if you'd like to get on the schedule. Any questions I can help with?</span></span>
+  <div class="strip-row">
+    <div class="strip-section">
+      <b>📱 VM Follow-up</b>
+      <div class="tpl">"Hey [Name]! It's [name] from Rover 🏠 Just tried calling about your 25% off cleaning discount! Let me know beds/baths + sqft and I can get your quote ready. Or call me back at [number]!"</div>
+    </div>
+    <div class="strip-section">
+      <b>📱 Post-Call Quote</b>
+      <div class="tpl">"Hey [Name]! Great chatting. Your quote: [type] for [beds/baths] — $[price] ($[discount] if you book by [date]). Reply or call [number]! 😊"</div>
+    </div>
+    <div class="strip-section">
+      <b>📱 2-Day Follow-up</b>
+      <div class="tpl">"Hi [Name], following up on your cleaning quote! The $[X] discount is still available this week."</div>
     </div>
   </div>
 </div>
