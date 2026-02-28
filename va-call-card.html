@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rover — Live Call Card</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--green:#22c55e;--green-bg:#f0fdf4;--blue:#3b82f6;--blue-bg:#eff6ff;--yellow:#eab308;--yellow-bg:#fefce8;--red:#ef4444;--red-bg:#fef2f2;--gray:#64748b;--bg:#f8fafc;--card:#fff;--text:#1e293b;--muted:#94a3b8;--radius:10px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;font-size:13px}
+.tabs{display:flex;background:#1e293b;padding:0}
+.tab{flex:1;padding:10px 0;text-align:center;color:#94a3b8;font-weight:700;font-size:15px;cursor:pointer;border-bottom:3px solid transparent;transition:.2s}
+.tab.active{color:#fff;border-bottom-color:#3b82f6}
+.tab:hover{color:#cbd5e1}
+.panel{display:none;height:calc(100vh - 43px);overflow-y:auto;padding:8px}
+.panel.active{display:flex;flex-direction:column;gap:6px}
+/* Flow */
+.flow{display:flex;gap:4px;align-items:stretch;flex-wrap:wrap}
+.node{flex:1;min-width:100px;border-radius:var(--radius);padding:8px 10px;position:relative;border-left:4px solid;display:flex;flex-direction:column;gap:4px;background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.node.green{border-color:var(--green);background:var(--green-bg)}
+.node.blue{border-color:var(--blue);background:var(--blue-bg)}
+.node.yellow{border-color:var(--yellow);background:var(--yellow-bg)}
+.node.red{border-color:var(--red);background:var(--red-bg)}
+.node-label{font-weight:800;font-size:10px;text-transform:uppercase;letter-spacing:.5px;opacity:.7}
+.node.green .node-label{color:var(--green)}
+.node.blue .node-label{color:var(--blue)}
+.node.yellow .node-label{color:var(--yellow)}
+.node.red .node-label{color:var(--red)}
+.node-phrase{font-size:12px;line-height:1.35;font-style:italic;color:var(--text)}
+.node-phrase strong{font-style:normal}
+.arrow{display:flex;align-items:center;color:var(--muted);font-size:16px;flex-shrink:0}
+/* Discovery checklist */
+.checklist{display:flex;flex-wrap:wrap;gap:2px 8px;font-size:11px;color:var(--gray)}
+.checklist span::before{content:"☐ "}
+/* Sections */
+.section{background:var(--card);border-radius:var(--radius);box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.section-header{padding:8px 12px;font-weight:700;font-size:12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;background:#f1f5f9}
+.section-header::after{content:"▸";transition:.2s;font-size:11px}
+.section-header.open::after{transform:rotate(90deg)}
+.section-body{display:none;padding:8px 12px;font-size:12px;line-height:1.5}
+.section-body.open{display:block}
+/* Objection table */
+.obj{display:grid;grid-template-columns:140px 1fr;gap:4px 10px;font-size:12px}
+.obj-q{font-weight:700;color:var(--red)}
+.obj-a{color:var(--text)}
+/* Voicemail / text */
+.vm{background:var(--green-bg);border-left:3px solid var(--green);padding:6px 10px;border-radius:6px;font-size:12px;font-style:italic;line-height:1.4}
+.txt{background:var(--blue-bg);border-left:3px solid var(--blue);padding:6px 10px;border-radius:6px;font-size:12px;line-height:1.4;white-space:pre-line}
+.note{font-size:11px;color:var(--muted);font-style:italic}
+/* Mobile */
+@media(max-width:700px){
+  .flow{flex-direction:column}
+  .arrow{transform:rotate(90deg);justify-content:center;padding:0}
+  .node{min-width:auto}
+  .obj{grid-template-columns:1fr;gap:2px}
+  body{font-size:12px;overflow-y:auto}
+  .panel.active{height:auto;min-height:calc(100vh - 43px)}
+}
+</style>
+</head>
+<body>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('inbound')">📞 INBOUND</div>
+  <div class="tab" onclick="switchTab('outbound')">📲 OUTBOUND</div>
+</div>
+
+<!-- ==================== INBOUND ==================== -->
+<div class="panel active" id="inbound">
+
+<div class="flow">
+  <div class="node green">
+    <div class="node-label">1 · Greeting</div>
+    <div class="node-phrase">"Hey! Thanks for calling Rover — you've got <strong>[name]</strong>!"</div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="node green">
+    <div class="node-label">2 · Name</div>
+    <div class="node-phrase">"Who am I speaking with?"</div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="node green">
+    <div class="node-label">3 · Warm Up</div>
+    <div class="node-phrase">"How's your day going, <strong>[name]</strong>?"</div>
+    <div class="note">15-20 sec of natural chat</div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="node blue">
+    <div class="node-label">4 · Why</div>
+    <div class="node-phrase">"What's bringing you to look for cleaning?"</div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="node blue">
+    <div class="node-label">5 · Discovery</div>
+    <div class="checklist">
+      <span>Type</span><span>Beds/Baths</span><span>Sqft</span><span>Condition</span><span>Pets</span><span>Day</span><span>City</span><span>Frequency</span>
+    </div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="node yellow">
+    <div class="node-label">6 · Explain</div>
+    <div class="node-phrase">"Team of two, <strong>[X] hours</strong>, we bring everything"</div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="node yellow">
+    <div class="node-label">7 · Price</div>
+    <div class="node-phrase">"<strong>$[X] after tax</strong>" → <em>pause</em> → "<strong>$[discount] if you book today</strong>"</div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="node red" style="min-width:130px">
+    <div class="node-label">8 · CLOSE ⚡</div>
+    <div class="node-phrase" style="font-size:14px;font-weight:800;font-style:normal;color:var(--red)">"What day works best?"</div>
+    <div class="note">NEVER SKIP — always ask</div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header" onclick="toggle(this)">🛡️ Objection Handling</div>
+  <div class="section-body">
+    <div class="obj">
+      <div class="obj-q">"Too expensive"</div>
+      <div class="obj-a">"I hear you. That's [X hrs], 2 cleaners, all supplies. Book today → $[X] off."<br><em>→ Still no?</em> "What were you hoping to spend? I might be able to adjust the scope."<br><em>→ Still no?</em> "Let me text you the quote — discount good through [date]."</div>
+      <div class="obj-q">"Need to think"</div>
+      <div class="obj-a">"Totally fair. Is it the price or the timing?"<br><em>→ Price:</em> see above &nbsp;|&nbsp; <em>→ Timing:</em> "When were you hoping to start? We usually have openings within the week."</div>
+      <div class="obj-q">"I'll call back"</div>
+      <div class="obj-a">"Can I text you the quote? Discount good through tomorrow."</div>
+      <div class="obj-q">"Shopping around"</div>
+      <div class="obj-a">"What matters most to you in a cleaning service?"</div>
+      <div class="obj-q">"Ask my spouse"</div>
+      <div class="obj-a">"Want me to text a summary you can share?"</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header" onclick="toggle(this)">💬 Text Templates</div>
+  <div class="section-body">
+    <div class="txt"><strong>After-call quote:</strong>
+"Hi [Name]! Thanks for calling Rover 🧹 Here's your quote:
+[Type] clean — $[X] (discount price: $[Y] if booked by tomorrow)
+Team of 2, ~[X] hours, we bring all supplies.
+Ready to book? Just reply with your preferred day!"</div>
+    <div style="height:6px"></div>
+    <div class="txt"><strong>No-answer follow-up:</strong>
+"Hi [Name], [name] from Rover Cleaners! Tried calling about your cleaning quote. We're 5-star rated and would love to help. Reply here or call (214) 396-6466!"</div>
+  </div>
+</div>
+
+</div>
+
+<!-- ==================== OUTBOUND ==================== -->
+<div class="panel" id="outbound">
+
+<div class="flow">
+  <div class="node green">
+    <div class="node-label">1 · Intro</div>
+    <div class="node-phrase">"Hi <strong>[Name]</strong>, this is <strong>[name]</strong> from Rover House Cleaners!"</div>
+    <div class="note">SLOW AND CLEAR</div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="node green">
+    <div class="node-label">2 · Permission</div>
+    <div class="node-phrase">"Is now a good time?"</div>
+    <div class="note">If no → schedule callback</div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="node green">
+    <div class="node-label">3 · Context</div>
+    <div class="node-phrase"><strong>Quote form:</strong> "You submitted a cleaning quote request — I'd love to help."<br><strong>FB lead:</strong> "You may have seen our ad — we're 5-star rated in <strong>[area]</strong>"</div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="node blue">
+    <div class="node-label">4 · Why</div>
+    <div class="node-phrase">"What's bringing you to look for cleaning?"</div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="node blue">
+    <div class="node-label">5 · Discovery</div>
+    <div class="checklist">
+      <span>Type</span><span>Beds/Baths</span><span>Sqft</span><span>Condition</span><span>Pets</span><span>Day</span><span>City</span><span>Frequency</span>
+    </div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="node yellow">
+    <div class="node-label">6 · Explain</div>
+    <div class="node-phrase">"Team of two, <strong>[X] hours</strong>, we bring everything"</div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="node yellow">
+    <div class="node-label">7 · Price</div>
+    <div class="node-phrase">"<strong>$[X] after tax</strong>" → <em>pause</em> → "<strong>$[discount] if you book today</strong>"</div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="node red" style="min-width:130px">
+    <div class="node-label">8 · CLOSE ⚡</div>
+    <div class="node-phrase" style="font-size:14px;font-weight:800;font-style:normal;color:var(--red)">"What day works best?"</div>
+    <div class="note">NEVER SKIP — always ask</div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header" onclick="toggle(this)">📞 Voicemail Script (20 sec)</div>
+  <div class="section-body">
+    <div class="vm">"Hi [Name], [name] from Rover! Calling about your quote request. Five-star rated, love to help. Call (214) 396-6466 or I'll text you. Have a great day!"</div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header" onclick="toggle(this)">🛡️ Objection Handling</div>
+  <div class="section-body">
+    <div class="obj">
+      <div class="obj-q">"Too expensive"</div>
+      <div class="obj-a">"I hear you. That's [X hrs], 2 cleaners, all supplies. Book today → $[X] off."<br><em>→ Still no?</em> "What were you hoping to spend? I might be able to adjust the scope."<br><em>→ Still no?</em> "Let me text you the quote — discount good through [date]."</div>
+      <div class="obj-q">"Need to think"</div>
+      <div class="obj-a">"Totally fair. Is it the price or the timing?"<br><em>→ Price:</em> see above &nbsp;|&nbsp; <em>→ Timing:</em> "When were you hoping to start? We usually have openings within the week."</div>
+      <div class="obj-q">"I'll call back"</div>
+      <div class="obj-a">"Can I text you the quote? Discount good through tomorrow."</div>
+      <div class="obj-q">"Don't remember"</div>
+      <div class="obj-a">"No worries! You may have seen our ad. We're 5-star rated in [area] — can I get you a quick quote?"</div>
+      <div class="obj-q">"Not interested"</div>
+      <div class="obj-a">"Totally understand. Mind if I ask — did you find another service, or is it just not the right time?"</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header" onclick="toggle(this)">💬 Text Templates</div>
+  <div class="section-body">
+    <div class="txt"><strong>Pre-call text (send before calling):</strong>
+"Hi [Name]! This is [name] from Rover Cleaners 🧹 I'll be giving you a call shortly about your cleaning quote. Talk soon!"</div>
+    <div style="height:6px"></div>
+    <div class="txt"><strong>Post-voicemail text:</strong>
+"Hi [Name], just left you a voicemail! This is [name] from Rover — 5-star rated cleaning in [area]. Happy to help with your quote. Reply here or call (214) 396-6466!"</div>
+  </div>
+</div>
+
+</div>
+
+<script>
+function switchTab(id){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===(id==='inbound'?0:1)));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===id));
+}
+function toggle(el){
+  el.classList.toggle('open');
+  el.nextElementSibling.classList.toggle('open');
+}
+</script>
+</body>
+</html>
