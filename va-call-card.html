@@ -65,8 +65,7 @@ html,body{height:100%;overflow:auto;font-family:system-ui,-apple-system,sans-ser
 .arrow-down{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid #94a3b8;margin:0 auto}
 
 /* Branch containers */
-.branch-row{display:flex;justify-content:center;gap:10px;position:relative;width:100%;padding-top:2px}
-.branch-row::before{content:'';position:absolute;top:0;height:2px;background:#94a3b8;left:var(--bar-left,25%);right:var(--bar-right,25%)}
+.branch-row{display:flex;justify-content:center;gap:10px;position:relative;width:100%}
 .branch{display:flex;flex-direction:column;align-items:center;flex:1;max-width:380px;min-width:0}
 .branch .vline{height:8px}
 
@@ -130,8 +129,9 @@ html,body{height:100%;overflow:auto;font-family:system-ui,-apple-system,sans-ser
   </div>
   <div class="vline short"></div>
 
-  <!-- 4-way branch -->
-  <div class="branch-row" style="width:90%;max-width:1120px;--bar-left:10%;--bar-right:10%">
+  <!-- 4-way branch bar -->
+  <div style="width:90%;max-width:1100px;height:2px;background:#94a3b8;margin:0 auto"></div>
+  <div class="branch-row" style="width:90%;max-width:1120px">
     <div class="branch">
       <div class="node blue-light md">
         <b>"How much?"</b>
@@ -160,6 +160,7 @@ html,body{height:100%;overflow:auto;font-family:system-ui,-apple-system,sans-ser
       </div>
     </div>
   </div>
+  <div style="width:90%;max-width:1100px;height:2px;background:#94a3b8;margin:0 auto"></div>
   <div class="vline short"></div><div class="arrow-down"></div>
 
   <!-- Discovery -->
@@ -213,7 +214,8 @@ html,body{height:100%;overflow:auto;font-family:system-ui,-apple-system,sans-ser
   <div class="vline short"></div>
 
   <!-- 5-way objection branch -->
-  <div class="branch-row" style="width:95%;max-width:1220px;--bar-left:8%;--bar-right:8%">
+  <div style="width:95%;max-width:1200px;height:2px;background:#94a3b8;margin:0 auto"></div>
+  <div class="branch-row" style="width:95%;max-width:1220px">
     <div class="branch">
       <div class="node green sm">
         <b>👍 Positive</b>
@@ -256,6 +258,7 @@ html,body{height:100%;overflow:auto;font-family:system-ui,-apple-system,sans-ser
       </div>
     </div>
   </div>
+  <div style="width:95%;max-width:1200px;height:2px;background:#94a3b8;margin:0 auto"></div>
   <div class="vline short"></div><div class="arrow-down"></div>
 
   <!-- Wrap Up -->
@@ -292,8 +295,9 @@ html,body{height:100%;overflow:auto;font-family:system-ui,-apple-system,sans-ser
     <b>Call [Name]</b>
   </div>
   <div class="vline short"></div>
+  <div style="width:90%;max-width:700px;height:2px;background:#94a3b8;margin:0 auto"></div>
 
-  <div class="branch-row" style="width:90%;max-width:720px;--bar-left:15%;--bar-right:15%">
+  <div class="branch-row" style="width:90%;max-width:720px">
     <!-- NO ANSWER branch -->
     <div class="branch" style="max-width:300px">
       <div class="node gray md" style="max-width:280px">
@@ -313,12 +317,14 @@ html,body{height:100%;overflow:auto;font-family:system-ui,-apple-system,sans-ser
       </div>
     </div>
   </div>
+  <div style="width:90%;max-width:700px;height:2px;background:#94a3b8;margin:0 auto"></div>
   <div class="vline short"></div>
   <div class="time-marker">~30 sec</div>
   <div class="vline short"></div>
 
   <!-- Good time / Bad time -->
-  <div class="branch-row" style="width:90%;max-width:720px;--bar-left:15%;--bar-right:15%">
+  <div style="width:90%;max-width:700px;height:2px;background:#94a3b8;margin:0 auto"></div>
+  <div class="branch-row" style="width:90%;max-width:720px">
     <div class="branch" style="max-width:240px">
       <div class="node gray md" style="max-width:240px">
         <b>"No / bad time"</b>
@@ -333,10 +339,12 @@ html,body{height:100%;overflow:auto;font-family:system-ui,-apple-system,sans-ser
       </div>
     </div>
   </div>
+  <div style="width:90%;max-width:700px;height:2px;background:#94a3b8;margin:0 auto"></div>
   <div class="vline short"></div><div class="arrow-down"></div>
 
   <!-- Lead Type Opener -->
-  <div class="branch-row" style="width:90%;max-width:920px;--bar-left:15%;--bar-right:15%">
+  <div style="width:90%;max-width:900px;height:2px;background:#94a3b8;margin:0 auto"></div>
+  <div class="branch-row" style="width:90%;max-width:920px">
     <div class="branch" style="max-width:280px">
       <div class="node blue-light md" style="max-width:280px">
         <b>Quote Form Lead</b>
@@ -352,10 +360,12 @@ html,body{height:100%;overflow:auto;font-family:system-ui,-apple-system,sans-ser
       </div>
     </div>
   </div>
+  <div style="width:90%;max-width:900px;height:2px;background:#94a3b8;margin:0 auto"></div>
   <div class="vline short"></div>
 
   <!-- FB Lead response row -->
-  <div class="branch-row" style="width:90%;max-width:820px;--bar-left:10%;--bar-right:10%">
+  <div style="width:90%;max-width:800px;height:2px;background:#94a3b8;margin:0 auto"></div>
+  <div class="branch-row" style="width:90%;max-width:820px">
     <div class="branch" style="max-width:220px">
       <div class="node green sm" style="max-width:220px">
         <b>Engages</b>
@@ -376,6 +386,7 @@ html,body{height:100%;overflow:auto;font-family:system-ui,-apple-system,sans-ser
       </div>
     </div>
   </div>
+  <div style="width:90%;max-width:800px;height:2px;background:#94a3b8;margin:0 auto"></div>
   <div class="vline short"></div><div class="arrow-down"></div>
 
   <!-- Outbound Discovery -->
@@ -430,7 +441,8 @@ html,body{height:100%;overflow:auto;font-family:system-ui,-apple-system,sans-ser
   <div class="vline short"></div>
 
   <!-- 5-way objection branch -->
-  <div class="branch-row" style="width:95%;max-width:1220px;--bar-left:8%;--bar-right:8%">
+  <div style="width:95%;max-width:1200px;height:2px;background:#94a3b8;margin:0 auto"></div>
+  <div class="branch-row" style="width:95%;max-width:1220px">
     <div class="branch">
       <div class="node green sm">
         <b>👍 Positive</b>
@@ -474,6 +486,7 @@ html,body{height:100%;overflow:auto;font-family:system-ui,-apple-system,sans-ser
       </div>
     </div>
   </div>
+  <div style="width:95%;max-width:1200px;height:2px;background:#94a3b8;margin:0 auto"></div>
   <div class="vline short"></div><div class="arrow-down"></div>
 
   <!-- Wrap Up -->
