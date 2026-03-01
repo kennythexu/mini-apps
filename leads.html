@@ -579,13 +579,14 @@ function renderEconomics() {
   const allData = DATA[currentMarket];
   if (!allData) return '<div style="color:#555;text-align:center;padding:40px;">No data for this market</div>';
 
-  const popTotal = currentWeeks * 2;
-  const popSlice = allData.slice(-popTotal);
-  const fullWeeks = popSlice.filter(w => !w.partial);
-  const half = Math.min(currentWeeks, Math.floor(fullWeeks.length / 2));
-  const last = fullWeeks.slice(-half);
-  const prev = fullWeeks.slice(-(half * 2), -half);
   const data = allData.slice(-currentWeeks);
+  const displayWeeks = data.filter(d => !d.partial);
+  // For PoP: take 2x currentWeeks, split into current vs prior (both = currentWeeks)
+  const popTotal = currentWeeks * 2;
+  const popSlice = allData.slice(-popTotal).filter(w => !w.partial);
+  const half = Math.min(currentWeeks, Math.floor(popSlice.length / 2));
+  const last = popSlice.slice(-half);
+  const prev = popSlice.slice(0, half);
 
   const fbCpl = getFbCpl(currentMarket) ?? computeBlendedFbCpl();
   const channels = ['fb', 'lsa', 'qf', 'tt', 'oth'];
@@ -604,10 +605,12 @@ function renderEconomics() {
     return { leads, booked, rev, cpl, spend, cpb, roi, avgTicket };
   }
 
-  const cur = {}, prv = {};
+  const cur = {}, prv = {}, popCur = {};
+  const displayWeeks = data.filter(d => !d.partial);
   channels.forEach(ch => {
-    cur[ch] = chStats(last, ch);
+    cur[ch] = chStats(displayWeeks, ch);
     prv[ch] = chStats(prev, ch);
+    popCur[ch] = chStats(last, ch);
   });
 
   let html = '';
@@ -662,7 +665,7 @@ function renderEconomics() {
 
   // Channel CPL & Conv table
   html += '<div class="section-title">📊 Channel CPL & Conversion Rates</div>';
-  html += '<div class="section-sub">Cost per lead input + lead-to-booked conversion · L' + half + 'W</div>';
+  html += '<div class="section-sub">Cost per lead input + lead-to-booked conversion · L' + currentWeeks + 'W</div>';
   html += '<div class="card" style="overflow-x:auto">';
   html += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
   html += '<thead><tr style="border-bottom:1px solid #333;text-align:left">';
@@ -724,7 +727,7 @@ function renderEconomics() {
 
   // CPB section
   html += '<div class="section-title">1️⃣ Cost per Booked Lead</div>';
-  html += '<div class="section-sub">L' + half + 'W · (CPL × Leads) ÷ Booked = CPB</div>';
+  html += '<div class="section-sub">L' + currentWeeks + 'W · (CPL × Leads) ÷ Booked = CPB</div>';
   html += '<div class="card">';
   const maxCpb = Math.max(...paid.map(ch => cur[ch].cpb || 0), 1);
   paid.forEach(ch => {
@@ -797,7 +800,7 @@ function renderEconomics() {
 
   // Est. Profit table
   html += '<div class="section-title">💰 Est. Profit by Channel (After Ad Spend)</div>';
-  html += '<div class="section-sub">Profit = (Revenue × ' + (marginRate * 100).toFixed(1) + '% margin) − Ad Spend · L' + half + 'W</div>';
+  html += '<div class="section-sub">Profit = (Revenue × ' + (marginRate * 100).toFixed(1) + '% margin) − Ad Spend · L' + currentWeeks + 'W</div>';
   html += '<div class="card">';
   html += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
   html += '<thead><tr style="border-bottom:1px solid #333;text-align:left">';
