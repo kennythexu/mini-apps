@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dispatch v2 DEMO | Rover Cleaners</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/framer-motion@11/dist/framer-motion.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+        .dark { background: #0a0a0a; color: #fafafa; }
+        .dark ::-webkit-scrollbar-thumb { background: #404040; }
+        .dark ::-webkit-scrollbar-thumb:hover { background: #525252; }
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+        .shimmer {
+            animation: shimmer 2s infinite linear;
+            background: linear-gradient(to right, #f3f4f6 0%, #e5e7eb 20%, #f3f4f6 40%, #f3f4f6 100%);
+            background-size: 1000px 100%;
+        }
+        .dark .shimmer {
+            background: linear-gradient(to right, #1f2937 0%, #374151 20%, #1f2937 40%, #1f2937 100%);
+        }
+        .progress-ring-circle {
+            transition: stroke-dashoffset 0.5s ease;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { borderRadius: { 'xl': '12px' } } }
+        }
+    </script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+        const { useState, useEffect, useRef, useMemo, useCallback } = React;
+        const { motion, AnimatePresence } = window.Motion;
+
+        const BASE_ID = 'appGDLBAoLuokBQ0Y';
+        const CACHE_TTL = 5 * 60 * 1000;
+
+        let contractorsCache = null;
+        let bookingsCache = null;
+        let cacheTime = 0;
+
+        const clearCache = () => { contractorsCache = null; bookingsCache = null; cacheTime = 0; };
+
+        const getConfig = () => ({
+            token: localStorage.getItem('at_token') || '',
+            base: localStorage.getItem('at_base') || BASE_ID,
+        });
+
+        const saveConfig = (token, base) => {
+            localStorage.setItem('at_token', token);
+            localStorage.setItem('at_base', base);
+        };
+
+        // DEMO: Load contractors — LA Metro, 50 contractors
+        const loadContractors = async () => {
+            if (contractorsCache && (Date.now() - cacheTime < CACHE_TTL)) return contractorsCache;
+
+            contractorsCache = [
+                { id:'rec001', name:'Maria Garcia',       firstName:'Maria',      city:'Santa Monica',  lat:34.0210, lng:-118.4920, rate:22, bookingsL28D:8,  bookingsNext7D:2, bookingsAllTime:187, priority:1, phone:'(310)555-0101', bk:{available:true},  notes:'' },
+                { id:'rec002', name:'James Washington',   firstName:'James',      city:'Venice',        lat:33.9840, lng:-118.4700, rate:20, bookingsL28D:5,  bookingsNext7D:3, bookingsAllTime:143, priority:0, phone:'(310)555-0142', bk:{available:true},  notes:'' },
+                { id:'rec003', name:'Rosa Mendez',        firstName:'Rosa',       city:'West Hollywood',lat:34.0910, lng:-118.3610, rate:22, bookingsL28D:12, bookingsNext7D:5, bookingsAllTime:234, priority:1, phone:'(310)555-0183', bk:{available:false}, notes:'' },
+                { id:'rec004', name:'Carlos Diaz',        firstName:'Carlos',     city:'Hollywood',     lat:34.0920, lng:-118.3290, rate:20, bookingsL28D:3,  bookingsNext7D:1, bookingsAllTime:89,  priority:0, phone:'(323)555-0221', bk:{available:true},  notes:'' },
+                { id:'rec005', name:'Tamara Jones',       firstName:'Tamara',     city:'Silver Lake',   lat:34.0865, lng:-118.2705, rate:22, bookingsL28D:7,  bookingsNext7D:2, bookingsAllTime:201, priority:1, phone:'(323)555-0264', bk:{available:true},  notes:'' },
+                { id:'rec006', name:'Kevin Parker',       firstName:'Kevin',      city:'Echo Park',     lat:34.0785, lng:-118.2600, rate:20, bookingsL28D:10, bookingsNext7D:4, bookingsAllTime:156, priority:0, phone:'(323)555-0305', bk:{available:true},  notes:'' },
+                { id:'rec007', name:'Linda Brooks',       firstName:'Linda',      city:'Los Feliz',     lat:34.1090, lng:-118.2930, rate:22, bookingsL28D:6,  bookingsNext7D:1, bookingsAllTime:118, priority:1, phone:'(323)555-0347', bk:{available:true},  notes:'' },
+                { id:'rec008', name:'Demetrius Hall',     firstName:'Demetrius',  city:'Glendale',      lat:34.1430, lng:-118.2555, rate:20, bookingsL28D:4,  bookingsNext7D:2, bookingsAllTime:72,  priority:0, phone:'(818)555-0388', bk:{available:false}, notes:'' },
+                { id:'rec009', name:'Sofia Reyes',        firstName:'Sofia',      city:'Burbank',       lat:34.1815, lng:-118.3095, rate:22, bookingsL28D:9,  bookingsNext7D:3, bookingsAllTime:165, priority:1, phone:'(818)555-0429', bk:{available:true},  notes:'' },
+                { id:'rec010', name:'Andre Thomas',       firstName:'Andre',      city:'Studio City',   lat:34.1390, lng:-118.3970, rate:20, bookingsL28D:2,  bookingsNext7D:0, bookingsAllTime:44,  priority:0, phone:'(818)555-0470', bk:{available:true},  notes:'' },
+                { id:'rec011', name:'Isabella Chen',      firstName:'Isabella',   city:'Sherman Oaks',  lat:34.1510, lng:-118.4490, rate:24, bookingsL28D:11, bookingsNext7D:3, bookingsAllTime:198, priority:1, phone:'(818)555-0511', bk:{available:true},  notes:'' },
+                { id:'rec012', name:'Marcus Johnson',     firstName:'Marcus',     city:'Encino',        lat:34.1620, lng:-118.5010, rate:21, bookingsL28D:7,  bookingsNext7D:2, bookingsAllTime:134, priority:0, phone:'(818)555-0552', bk:{available:true},  notes:'' },
+                { id:'rec013', name:'Angela Martinez',    firstName:'Angela',     city:'Culver City',   lat:34.0215, lng:-118.3960, rate:23, bookingsL28D:14, bookingsNext7D:4, bookingsAllTime:267, priority:1, phone:'(310)555-0593', bk:{available:true},  notes:'' },
+                { id:'rec014', name:'Robert Kim',         firstName:'Robert',     city:'Inglewood',     lat:33.9620, lng:-118.3535, rate:19, bookingsL28D:5,  bookingsNext7D:1, bookingsAllTime:92,  priority:0, phone:'(310)555-0634', bk:{available:true},  notes:'' },
+                { id:'rec015', name:'Patricia Nguyen',    firstName:'Patricia',   city:'Torrance',      lat:33.8360, lng:-118.3410, rate:21, bookingsL28D:8,  bookingsNext7D:2, bookingsAllTime:145, priority:1, phone:'(310)555-0675', bk:{available:true},  notes:'' },
+                { id:'rec016', name:'Christopher Lee',    firstName:'Chris',      city:'Long Beach',    lat:33.7705, lng:-118.1940, rate:20, bookingsL28D:6,  bookingsNext7D:2, bookingsAllTime:112, priority:0, phone:'(562)555-0716', bk:{available:true},  notes:'' },
+                { id:'rec017', name:'Michelle Rodriguez', firstName:'Michelle',   city:'Pasadena',      lat:34.1480, lng:-118.1450, rate:22, bookingsL28D:10, bookingsNext7D:3, bookingsAllTime:178, priority:1, phone:'(626)555-0757', bk:{available:true},  notes:'' },
+                { id:'rec018', name:'Daniel Thompson',    firstName:'Daniel',     city:'Brentwood',     lat:34.0495, lng:-118.4745, rate:25, bookingsL28D:13, bookingsNext7D:4, bookingsAllTime:245, priority:1, phone:'(310)555-0798', bk:{available:true},  notes:'' },
+                { id:'rec019', name:'Stephanie Wright',   firstName:'Stephanie',  city:'El Segundo',    lat:33.9195, lng:-118.4170, rate:21, bookingsL28D:4,  bookingsNext7D:1, bookingsAllTime:78,  priority:0, phone:'(310)555-0839', bk:{available:true},  notes:'' },
+                { id:'rec020', name:'Anthony Davis',      firstName:'Anthony',    city:'Hawthorne',     lat:33.9160, lng:-118.3530, rate:19, bookingsL28D:3,  bookingsNext7D:0, bookingsAllTime:56,  priority:0, phone:'(310)555-0880', bk:{available:true},  notes:'' },
+                { id:'rec021', name:'Jennifer Lopez',     firstName:'Jennifer',   city:'Santa Monica',  lat:34.0200, lng:-118.4900, rate:23, bookingsL28D:9,  bookingsNext7D:3, bookingsAllTime:167, priority:1, phone:'(310)555-0921', bk:{available:true},  notes:'' },
+                { id:'rec022', name:'Michael Brown',      firstName:'Michael',    city:'Venice',        lat:33.9855, lng:-118.4690, rate:20, bookingsL28D:6,  bookingsNext7D:2, bookingsAllTime:123, priority:0, phone:'(310)555-0962', bk:{available:true},  notes:'' },
+                { id:'rec023', name:'Amanda Wilson',      firstName:'Amanda',     city:'West Hollywood',lat:34.0895, lng:-118.3620, rate:22, bookingsL28D:11, bookingsNext7D:4, bookingsAllTime:189, priority:1, phone:'(310)555-1003', bk:{available:false}, notes:'' },
+                { id:'rec024', name:'David Miller',       firstName:'David',      city:'Hollywood',     lat:34.0935, lng:-118.3280, rate:21, bookingsL28D:7,  bookingsNext7D:2, bookingsAllTime:134, priority:0, phone:'(323)555-1044', bk:{available:true},  notes:'' },
+                { id:'rec025', name:'Jessica Taylor',     firstName:'Jessica',    city:'Silver Lake',   lat:34.0875, lng:-118.2695, rate:22, bookingsL28D:8,  bookingsNext7D:3, bookingsAllTime:156, priority:1, phone:'(323)555-1085', bk:{available:true},  notes:'' },
+                { id:'rec026', name:'Ryan Anderson',      firstName:'Ryan',       city:'Echo Park',     lat:34.0775, lng:-118.2610, rate:20, bookingsL28D:5,  bookingsNext7D:1, bookingsAllTime:98,  priority:0, phone:'(323)555-1126', bk:{available:true},  notes:'' },
+                { id:'rec027', name:'Laura Garcia',       firstName:'Laura',      city:'Los Feliz',     lat:34.1080, lng:-118.2925, rate:23, bookingsL28D:12, bookingsNext7D:5, bookingsAllTime:212, priority:1, phone:'(323)555-1167', bk:{available:true},  notes:'' },
+                { id:'rec028', name:'Jason Martinez',     firstName:'Jason',      city:'Glendale',      lat:34.1420, lng:-118.2560, rate:20, bookingsL28D:4,  bookingsNext7D:2, bookingsAllTime:87,  priority:0, phone:'(818)555-1208', bk:{available:false}, notes:'' },
+                { id:'rec029', name:'Sarah Johnson',      firstName:'Sarah',      city:'Burbank',       lat:34.1800, lng:-118.3085, rate:22, bookingsL28D:9,  bookingsNext7D:3, bookingsAllTime:165, priority:1, phone:'(818)555-1249', bk:{available:true},  notes:'' },
+                { id:'rec030', name:'Brandon White',      firstName:'Brandon',    city:'Studio City',   lat:34.1400, lng:-118.3960, rate:21, bookingsL28D:6,  bookingsNext7D:2, bookingsAllTime:118, priority:0, phone:'(818)555-1290', bk:{available:true},  notes:'' },
+                { id:'rec031', name:'Nicole Harris',      firstName:'Nicole',     city:'Sherman Oaks',  lat:34.1520, lng:-118.4495, rate:24, bookingsL28D:15, bookingsNext7D:5, bookingsAllTime:278, priority:1, phone:'(818)555-1331', bk:{available:true},  notes:'' },
+                { id:'rec032', name:'Justin Clark',       firstName:'Justin',     city:'Encino',        lat:34.1610, lng:-118.5000, rate:20, bookingsL28D:3,  bookingsNext7D:0, bookingsAllTime:67,  priority:0, phone:'(818)555-1372', bk:{available:true},  notes:'' },
+                { id:'rec033', name:'Melissa Lewis',      firstName:'Melissa',    city:'Culver City',   lat:34.0205, lng:-118.3970, rate:22, bookingsL28D:8,  bookingsNext7D:2, bookingsAllTime:145, priority:1, phone:'(310)555-1413', bk:{available:true},  notes:'' },
+                { id:'rec034', name:'Kevin Walker',       firstName:'Kevin',      city:'Inglewood',     lat:33.9610, lng:-118.3525, rate:19, bookingsL28D:4,  bookingsNext7D:1, bookingsAllTime:82,  priority:0, phone:'(310)555-1454', bk:{available:true},  notes:'' },
+                { id:'rec035', name:'Rachel Green',       firstName:'Rachel',     city:'Torrance',      lat:33.8355, lng:-118.3400, rate:21, bookingsL28D:7,  bookingsNext7D:2, bookingsAllTime:129, priority:0, phone:'(310)555-1495', bk:{available:true},  notes:'' },
+                { id:'rec036', name:'Steven Hall',        firstName:'Steven',     city:'Long Beach',    lat:33.7710, lng:-118.1930, rate:20, bookingsL28D:5,  bookingsNext7D:1, bookingsAllTime:104, priority:0, phone:'(562)555-1536', bk:{available:true},  notes:'' },
+                { id:'rec037', name:'Diana Scott',        firstName:'Diana',      city:'Pasadena',      lat:34.1475, lng:-118.1440, rate:22, bookingsL28D:10, bookingsNext7D:3, bookingsAllTime:190, priority:1, phone:'(626)555-1577', bk:{available:true},  notes:'' },
+                { id:'rec038', name:'Eric Adams',         firstName:'Eric',       city:'Brentwood',     lat:34.0485, lng:-118.4750, rate:26, bookingsL28D:13, bookingsNext7D:4, bookingsAllTime:232, priority:1, phone:'(310)555-1618', bk:{available:true},  notes:'' },
+                { id:'rec039', name:'Vanessa Torres',     firstName:'Vanessa',    city:'El Segundo',    lat:33.9190, lng:-118.4160, rate:21, bookingsL28D:4,  bookingsNext7D:1, bookingsAllTime:74,  priority:0, phone:'(310)555-1659', bk:{available:true},  notes:'' },
+                { id:'rec040', name:'Derek Robinson',     firstName:'Derek',      city:'Hawthorne',     lat:33.9165, lng:-118.3520, rate:19, bookingsL28D:2,  bookingsNext7D:0, bookingsAllTime:48,  priority:0, phone:'(310)555-1700', bk:{available:true},  notes:'' },
+                { id:'rec041', name:'Priya Patel',        firstName:'Priya',      city:'Santa Monica',  lat:34.0185, lng:-118.4905, rate:23, bookingsL28D:11, bookingsNext7D:3, bookingsAllTime:204, priority:1, phone:'(310)555-1741', bk:{available:true},  notes:'' },
+                { id:'rec042', name:'Omar Khalid',        firstName:'Omar',       city:'Venice',        lat:33.9845, lng:-118.4698, rate:20, bookingsL28D:6,  bookingsNext7D:2, bookingsAllTime:115, priority:0, phone:'(310)555-1782', bk:{available:true},  notes:'' },
+                { id:'rec043', name:'Elena Vasquez',      firstName:'Elena',      city:'Hollywood',     lat:34.0922, lng:-118.3282, rate:21, bookingsL28D:8,  bookingsNext7D:3, bookingsAllTime:148, priority:1, phone:'(323)555-1823', bk:{available:true},  notes:'' },
+                { id:'rec044', name:'Malik Freeman',      firstName:'Malik',      city:'Culver City',   lat:34.0218, lng:-118.3958, rate:20, bookingsL28D:5,  bookingsNext7D:1, bookingsAllTime:96,  priority:0, phone:'(310)555-1864', bk:{available:true},  notes:'' },
+                { id:'rec045', name:'Yuki Tanaka',        firstName:'Yuki',       city:'Torrance',      lat:33.8352, lng:-118.3408, rate:22, bookingsL28D:9,  bookingsNext7D:3, bookingsAllTime:162, priority:1, phone:'(310)555-1905', bk:{available:true},  notes:'' },
+                { id:'rec046', name:'Cynthia Moore',      firstName:'Cynthia',    city:'Long Beach',    lat:33.7695, lng:-118.1945, rate:21, bookingsL28D:7,  bookingsNext7D:2, bookingsAllTime:138, priority:0, phone:'(562)555-1946', bk:{available:true},  notes:'' },
+                { id:'rec047', name:'Trevor Hughes',      firstName:'Trevor',     city:'Glendale',      lat:34.1432, lng:-118.2548, rate:20, bookingsL28D:3,  bookingsNext7D:0, bookingsAllTime:62,  priority:0, phone:'(818)555-1987', bk:{available:true},  notes:'' },
+                { id:'rec048', name:'Camille Bernard',    firstName:'Camille',    city:'Los Feliz',     lat:34.1088, lng:-118.2935, rate:23, bookingsL28D:12, bookingsNext7D:4, bookingsAllTime:219, priority:1, phone:'(323)555-2028', bk:{available:true},  notes:'' },
+                { id:'rec049', name:'Rafael Soto',        firstName:'Rafael',     city:'Echo Park',     lat:34.0778, lng:-118.2608, rate:20, bookingsL28D:6,  bookingsNext7D:2, bookingsAllTime:107, priority:0, phone:'(213)555-2069', bk:{available:true},  notes:'' },
+                { id:'rec050', name:'Keisha Williams',    firstName:'Keisha',     city:'Inglewood',     lat:33.9622, lng:-118.3528, rate:21, bookingsL28D:10, bookingsNext7D:3, bookingsAllTime:183, priority:1, phone:'(310)555-2110', bk:{available:true},  notes:'' },
+            ];
+
+            cacheTime = Date.now();
+            return Promise.resolve(contractorsCache);
+        };
+
+        // DEMO: Load bookings — LA Metro, 40 bookings (Feb 25 – Mar 10 2026)
+        const loadBookings = async () => {
+            if (bookingsCache && (Date.now() - cacheTime < CACHE_TTL)) return bookingsCache;
+
+            bookingsCache = [
+                { id:'b001',  date:'2026-02-25', address:'1542 Sunset Blvd, Los Angeles, CA',              customerName:'Emily Parker',     customer:'Emily Parker',     contractor:'Maria Garcia',      service:'Monthly Recurring',  amount:165, lat:34.0779, lng:-118.3882, beds:'2', baths:'2', sqft:'1200', timeStr:'8:00 AM',  lengthSec:10800, contractorIds:'rec001' },
+                { id:'b002',  date:'2026-02-25', address:'4821 Santa Monica Blvd, Santa Monica, CA',        customerName:'James Hoffman',     customer:'James Hoffman',    contractor:'Jennifer Lopez',    service:'Standard Clean',     amount:145, lat:34.0195, lng:-118.4912, beds:'1', baths:'1', sqft:'900',  timeStr:'10:00 AM', lengthSec:7200,  contractorIds:'rec021' },
+                { id:'b003',  date:'2026-02-25', address:'312 Abbot Kinney Blvd, Venice, CA',               customerName:'Sofia Castillo',    customer:'Sofia Castillo',   contractor:'Unassigned',        service:'Deep Clean',         amount:220, lat:33.9900, lng:-118.4699, beds:'3', baths:'2', sqft:'1800', timeStr:'1:00 PM',  lengthSec:14400, contractorIds:'' },
+                { id:'b004',  date:'2026-02-26', address:'7605 Melrose Ave, West Hollywood, CA',             customerName:'Ryan Kim',          customer:'Ryan Kim',         contractor:'Amanda Wilson',     service:'Monthly Recurring',  amount:185, lat:34.0836, lng:-118.3614, beds:'2', baths:'2', sqft:'1500', timeStr:'9:00 AM',  lengthSec:10800, contractorIds:'rec023' },
+                { id:'b005',  date:'2026-02-26', address:'2914 Wilshire Blvd, Los Angeles, CA',              customerName:'Natalie Stone',     customer:'Natalie Stone',    contractor:'Unassigned',        service:'Standard Clean',     amount:155, lat:34.0537, lng:-118.4412, beds:'2', baths:'1', sqft:'1100', timeStr:'10:00 AM', lengthSec:7200,  contractorIds:'' },
+                { id:'b006',  date:'2026-02-26', address:'500 La Cienega Blvd, Los Angeles, CA',             customerName:'Marcus Webb',       customer:'Marcus Webb',      contractor:'Angela Martinez',   service:'Monthly Recurring',  amount:175, lat:34.0634, lng:-118.3762, beds:'3', baths:'2', sqft:'1600', timeStr:'1:00 PM',  lengthSec:10800, contractorIds:'rec013' },
+                { id:'b007',  date:'2026-02-27', address:'6201 Ventura Blvd, Studio City, CA',               customerName:'Claire Hughes',     customer:'Claire Hughes',    contractor:'Brandon White',     service:'Biweekly Recurring', amount:195, lat:34.1413, lng:-118.3968, beds:'3', baths:'2', sqft:'2000', timeStr:'8:00 AM',  lengthSec:10800, contractorIds:'rec030' },
+                { id:'b008',  date:'2026-02-27', address:'1000 Pacific Coast Hwy, Santa Monica, CA',         customerName:'Derek Shaw',        customer:'Derek Shaw',       contractor:'Unassigned',        service:'Deep Clean',         amount:260, lat:34.0052, lng:-118.4953, beds:'4', baths:'3', sqft:'2800', timeStr:'10:00 AM', lengthSec:18000, contractorIds:'' },
+                { id:'b009',  date:'2026-02-27', address:'2100 Ocean Ave, Santa Monica, CA',                 customerName:'Lauren Torres',     customer:'Lauren Torres',    contractor:'Maria Garcia',      service:'Monthly Recurring',  amount:210, lat:34.0199, lng:-118.4952, beds:'3', baths:'2', sqft:'2200', timeStr:'3:00 PM',  lengthSec:10800, contractorIds:'rec001' },
+                { id:'b010',  date:'2026-02-28', address:'3400 Cahuenga Blvd, Los Angeles, CA',              customerName:'Tyler Brooks',      customer:'Tyler Brooks',     contractor:'Unassigned',        service:'Move Out Clean',     amount:310, lat:34.1021, lng:-118.3395, beds:'4', baths:'3', sqft:'3500', timeStr:'8:00 AM',  lengthSec:21600, contractorIds:'' },
+                { id:'b011',  date:'2026-02-28', address:'4500 Sepulveda Blvd, Culver City, CA',             customerName:'Monica Chan',       customer:'Monica Chan',      contractor:'Melissa Lewis',     service:'Standard Clean',     amount:145, lat:34.0094, lng:-118.4197, beds:'2', baths:'1', sqft:'1000', timeStr:'10:00 AM', lengthSec:7200,  contractorIds:'rec033' },
+                { id:'b012',  date:'2026-02-28', address:'8900 Beverly Blvd, West Hollywood, CA',            customerName:'Aaron Knight',      customer:'Aaron Knight',     contractor:'Unassigned',        service:'Deep Clean',         amount:235, lat:34.0808, lng:-118.3663, beds:'3', baths:'2', sqft:'2200', timeStr:'1:00 PM',  lengthSec:14400, contractorIds:'' },
+                { id:'b013',  date:'2026-03-01', address:'1200 Colorado Blvd, Pasadena, CA',                 customerName:'Heather Mills',     customer:'Heather Mills',    contractor:'Michelle Rodriguez',service:'Monthly Recurring',  amount:185, lat:34.1444, lng:-118.1462, beds:'3', baths:'2', sqft:'1800', timeStr:'8:00 AM',  lengthSec:10800, contractorIds:'rec017' },
+                { id:'b014',  date:'2026-03-01', address:'2300 Lincoln Blvd, Venice, CA',                    customerName:'Carlos Ruiz',       customer:'Carlos Ruiz',      contractor:'Unassigned',        service:'Standard Clean',     amount:155, lat:33.9985, lng:-118.4630, beds:'2', baths:'2', sqft:'1200', timeStr:'10:00 AM', lengthSec:7200,  contractorIds:'' },
+                { id:'b015',  date:'2026-03-01', address:'5600 Hollywood Blvd, Hollywood, CA',               customerName:'Fiona Adams',       customer:'Fiona Adams',      contractor:'David Miller',      service:'Monthly Recurring',  amount:175, lat:34.1016, lng:-118.3301, beds:'3', baths:'2', sqft:'1600', timeStr:'1:00 PM',  lengthSec:10800, contractorIds:'rec024' },
+                { id:'b016',  date:'2026-03-02', address:'1542 Sunset Blvd, Los Angeles, CA',                customerName:'Jake Patel',        customer:'Jake Patel',       contractor:'Tamara Jones',      service:'Deep Clean',         amount:250, lat:34.0779, lng:-118.3882, beds:'4', baths:'3', sqft:'3500', timeStr:'8:00 AM',  lengthSec:18000, contractorIds:'rec005' },
+                { id:'b017',  date:'2026-03-02', address:'4821 Santa Monica Blvd, Santa Monica, CA',         customerName:'Vanessa Scott',     customer:'Vanessa Scott',    contractor:'Unassigned',        service:'Standard Clean',     amount:135, lat:34.0195, lng:-118.4912, beds:'1', baths:'1', sqft:'800',  timeStr:'10:00 AM', lengthSec:7200,  contractorIds:'' },
+                { id:'b018',  date:'2026-03-02', address:'312 Abbot Kinney Blvd, Venice, CA',                customerName:'Liam Chen',         customer:'Liam Chen',        contractor:'Michael Brown',     service:'Monthly Recurring',  amount:185, lat:33.9900, lng:-118.4699, beds:'3', baths:'2', sqft:'1800', timeStr:'3:00 PM',  lengthSec:10800, contractorIds:'rec022' },
+                { id:'b019',  date:'2026-03-03', address:'7605 Melrose Ave, West Hollywood, CA',              customerName:'Olivia Reed',       customer:'Olivia Reed',      contractor:'Unassigned',        service:'Move Out Clean',     amount:285, lat:34.0836, lng:-118.3614, beds:'3', baths:'2', sqft:'2200', timeStr:'9:00 AM',  lengthSec:18000, contractorIds:'' },
+                { id:'b020',  date:'2026-03-03', address:'2914 Wilshire Blvd, Los Angeles, CA',               customerName:'Nathan Long',       customer:'Nathan Long',      contractor:'Rosa Mendez',       service:'Biweekly Recurring', amount:165, lat:34.0537, lng:-118.4412, beds:'2', baths:'2', sqft:'1400', timeStr:'10:00 AM', lengthSec:10800, contractorIds:'rec003' },
+                { id:'b021',  date:'2026-03-03', address:'500 La Cienega Blvd, Los Angeles, CA',              customerName:'Brianna Fox',       customer:'Brianna Fox',      contractor:'Unassigned',        service:'Standard Clean',     amount:145, lat:34.0634, lng:-118.3762, beds:'2', baths:'1', sqft:'1000', timeStr:'1:00 PM',  lengthSec:7200,  contractorIds:'' },
+                { id:'b022',  date:'2026-03-04', address:'6201 Ventura Blvd, Studio City, CA',                customerName:'Aaron Price',       customer:'Aaron Price',      contractor:'Nicole Harris',     service:'Monthly Recurring',  amount:195, lat:34.1413, lng:-118.3968, beds:'3', baths:'2', sqft:'2000', timeStr:'8:00 AM',  lengthSec:10800, contractorIds:'rec031' },
+                { id:'b023',  date:'2026-03-04', address:'1000 Pacific Coast Hwy, Santa Monica, CA',          customerName:'Rebecca Diaz',      customer:'Rebecca Diaz',     contractor:'Unassigned',        service:'Deep Clean',         amount:280, lat:34.0052, lng:-118.4953, beds:'4', baths:'3', sqft:'2800', timeStr:'10:00 AM', lengthSec:18000, contractorIds:'' },
+                { id:'b024',  date:'2026-03-04', address:'2100 Ocean Ave, Santa Monica, CA',                  customerName:'Samuel Grant',      customer:'Samuel Grant',     contractor:'Priya Patel',       service:'Monthly Recurring',  amount:220, lat:34.0199, lng:-118.4952, beds:'3', baths:'2', sqft:'2200', timeStr:'3:00 PM',  lengthSec:10800, contractorIds:'rec041' },
+                { id:'b025',  date:'2026-03-05', address:'3400 Cahuenga Blvd, Los Angeles, CA',               customerName:'Tiffany Ross',      customer:'Tiffany Ross',     contractor:'Kevin Parker',      service:'Standard Clean',     amount:155, lat:34.1021, lng:-118.3395, beds:'2', baths:'2', sqft:'1400', timeStr:'8:00 AM',  lengthSec:7200,  contractorIds:'rec006' },
+                { id:'b026',  date:'2026-03-05', address:'4500 Sepulveda Blvd, Culver City, CA',              customerName:'Victor Huang',      customer:'Victor Huang',     contractor:'Unassigned',        service:'Move Out Clean',     amount:330, lat:34.0094, lng:-118.4197, beds:'5', baths:'4', sqft:'4500', timeStr:'10:00 AM', lengthSec:21600, contractorIds:'' },
+                { id:'b027',  date:'2026-03-05', address:'8900 Beverly Blvd, West Hollywood, CA',             customerName:'Alicia Turner',     customer:'Alicia Turner',    contractor:'Camille Bernard',   service:'Monthly Recurring',  amount:195, lat:34.0808, lng:-118.3663, beds:'3', baths:'2', sqft:'2000', timeStr:'1:00 PM',  lengthSec:10800, contractorIds:'rec048' },
+                { id:'b028',  date:'2026-03-06', address:'1200 Colorado Blvd, Pasadena, CA',                  customerName:'Derek Manning',     customer:'Derek Manning',    contractor:'Diana Scott',       service:'Deep Clean',         amount:240, lat:34.1444, lng:-118.1462, beds:'4', baths:'3', sqft:'2800', timeStr:'8:00 AM',  lengthSec:14400, contractorIds:'rec037' },
+                { id:'b029',  date:'2026-03-06', address:'2300 Lincoln Blvd, Venice, CA',                     customerName:'Kristin Wells',     customer:'Kristin Wells',    contractor:'Unassigned',        service:'Standard Clean',     amount:145, lat:33.9985, lng:-118.4630, beds:'2', baths:'1', sqft:'1000', timeStr:'10:00 AM', lengthSec:7200,  contractorIds:'' },
+                { id:'b030',  date:'2026-03-06', address:'5600 Hollywood Blvd, Hollywood, CA',                customerName:'George Nash',       customer:'George Nash',      contractor:'Angela Martinez',   service:'Biweekly Recurring', amount:175, lat:34.1016, lng:-118.3301, beds:'3', baths:'2', sqft:'1600', timeStr:'1:00 PM',  lengthSec:10800, contractorIds:'rec013' },
+                { id:'b031',  date:'2026-03-07', address:'1542 Sunset Blvd, Los Angeles, CA',                 customerName:'Madison Burke',     customer:'Madison Burke',    contractor:'Unassigned',        service:'Standard Clean',     amount:145, lat:34.0779, lng:-118.3882, beds:'2', baths:'1', sqft:'1000', timeStr:'8:00 AM',  lengthSec:7200,  contractorIds:'' },
+                { id:'b032',  date:'2026-03-07', address:'4821 Santa Monica Blvd, Santa Monica, CA',          customerName:'Evan Cole',         customer:'Evan Cole',        contractor:'Daniel Thompson',   service:'Monthly Recurring',  amount:245, lat:34.0195, lng:-118.4912, beds:'4', baths:'3', sqft:'3500', timeStr:'10:00 AM', lengthSec:14400, contractorIds:'rec018' },
+                { id:'b033',  date:'2026-03-07', address:'312 Abbot Kinney Blvd, Venice, CA',                 customerName:'Hannah West',       customer:'Hannah West',      contractor:'Unassigned',        service:'Move Out Clean',     amount:295, lat:33.9900, lng:-118.4699, beds:'3', baths:'2', sqft:'2200', timeStr:'3:00 PM',  lengthSec:18000, contractorIds:'' },
+                { id:'b034',  date:'2026-03-08', address:'7605 Melrose Ave, West Hollywood, CA',               customerName:'Paul Stevens',      customer:'Paul Stevens',     contractor:'Sofia Reyes',       service:'Monthly Recurring',  amount:185, lat:34.0836, lng:-118.3614, beds:'3', baths:'2', sqft:'1800', timeStr:'9:00 AM',  lengthSec:10800, contractorIds:'rec009' },
+                { id:'b035',  date:'2026-03-08', address:'2914 Wilshire Blvd, Los Angeles, CA',                customerName:'Emma Jordan',       customer:'Emma Jordan',      contractor:'Unassigned',        service:'Deep Clean',         amount:225, lat:34.0537, lng:-118.4412, beds:'3', baths:'2', sqft:'2000', timeStr:'1:00 PM',  lengthSec:14400, contractorIds:'' },
+                { id:'b036',  date:'2026-03-09', address:'6201 Ventura Blvd, Studio City, CA',                 customerName:'Alex Rivera',       customer:'Alex Rivera',      contractor:'Isabella Chen',     service:'Monthly Recurring',  amount:210, lat:34.1413, lng:-118.3968, beds:'3', baths:'2', sqft:'2000', timeStr:'8:00 AM',  lengthSec:10800, contractorIds:'rec011' },
+                { id:'b037',  date:'2026-03-09', address:'1000 Pacific Coast Hwy, Santa Monica, CA',           customerName:'Chloe Bennett',     customer:'Chloe Bennett',    contractor:'Unassigned',        service:'Standard Clean',     amount:165, lat:34.0052, lng:-118.4953, beds:'2', baths:'2', sqft:'1400', timeStr:'10:00 AM', lengthSec:7200,  contractorIds:'' },
+                { id:'b038',  date:'2026-03-09', address:'2100 Ocean Ave, Santa Monica, CA',                   customerName:'Kevin Nash',        customer:'Kevin Nash',       contractor:'Eric Adams',        service:'Deep Clean',         amount:270, lat:34.0199, lng:-118.4952, beds:'4', baths:'3', sqft:'2800', timeStr:'3:00 PM',  lengthSec:18000, contractorIds:'rec038' },
+                { id:'b039',  date:'2026-03-10', address:'3400 Cahuenga Blvd, Los Angeles, CA',                customerName:'Nadia Okafor',      customer:'Nadia Okafor',     contractor:'Unassigned',        service:'Move Out Clean',     amount:315, lat:34.1021, lng:-118.3395, beds:'5', baths:'4', sqft:'4500', timeStr:'8:00 AM',  lengthSec:21600, contractorIds:'' },
+                { id:'b040',  date:'2026-03-10', address:'8900 Beverly Blvd, West Hollywood, CA',              customerName:'Patrick Moore',     customer:'Patrick Moore',    contractor:'Linda Brooks',      service:'Monthly Recurring',  amount:185, lat:34.0808, lng:-118.3663, beds:'3', baths:'2', sqft:'1800', timeStr:'10:00 AM', lengthSec:10800, contractorIds:'rec007' },
+            ];
+
+            return Promise.resolve(bookingsCache);
+        };
+
+        // Geo utilities
+        const haversine = (lat1, lng1, lat2, lng2) => {
+            const R = 3959;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        };
+
+        const detectMarket = (address) => {
+            const a = address.toLowerCase();
+            if (a.includes('santa monica') || a.includes('venice') || a.includes('brentwood')) return 'LA-West';
+            if (a.includes('west hollywood') || a.includes('hollywood') || a.includes('silver lake') || a.includes('echo park')) return 'LA-Central';
+            if (a.includes('burbank') || a.includes('glendale') || a.includes('pasadena')) return 'LA-North';
+            if (a.includes('studio city') || a.includes('sherman oaks') || a.includes('encino')) return 'LA-Valley';
+            if (a.includes('culver city') || a.includes('inglewood') || a.includes('torrance')) return 'LA-South';
+            if (a.includes('long beach') || a.includes('el segundo') || a.includes('hawthorne')) return 'LA-SouthBay';
+            if (a.includes('los angeles') || a.includes(', ca')) return 'LA';
+            return '';
+        };
+
+        const detectMarketFromCity = (city) => {
+            if (!city) return '';
+            const c = city.toLowerCase();
+            if (c.includes('santa monica') || c.includes('venice') || c.includes('brentwood')) return 'LA-West';
+            if (c.includes('west hollywood') || c.includes('hollywood') || c.includes('silver lake') || c.includes('echo park') || c.includes('los feliz')) return 'LA-Central';
+            if (c.includes('burbank') || c.includes('glendale') || c.includes('pasadena')) return 'LA-North';
+            if (c.includes('studio city') || c.includes('sherman oaks') || c.includes('encino')) return 'LA-Valley';
+            if (c.includes('culver city') || c.includes('inglewood') || c.includes('torrance')) return 'LA-South';
+            if (c.includes('long beach') || c.includes('el segundo') || c.includes('hawthorne')) return 'LA-SouthBay';
+            return 'LA';
+        };
+
+        const extractCity = (address) => {
+            if (!address) return '';
+            const parts = address.split(',').map(s => s.trim());
+            return parts.length >= 2 ? parts[parts.length - 2] : parts[0];
+        };
+
+        const timeToMinutes = (t) => {
+            if (typeof t === 'number' || !String(t).includes(':')) {
+                const n = Number(t);
+                return Math.floor(n / 100) * 60 + (n % 100);
+            }
+            const [h, m] = String(t).split(':').map(Number);
+            return (h || 0) * 60 + (m || 0);
+        };
+
+        const minutesToTime = (mins) => {
+            if (mins === null || mins === undefined) return '';
+            const h = Math.floor(mins / 60);
+            const m = mins % 60;
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            const h12 = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+            return `${h12}:${m.toString().padStart(2, '0')} ${ampm}`;
+        };
+
+        const formatTime = (t) => {
+            if (t === null || t === undefined || t === '') return '';
+            let h, m;
+            if (typeof t === 'number' || !String(t).includes(':')) {
+                const n = Number(t);
+                h = Math.floor(n / 100);
+                m = n % 100;
+            } else {
+                [h, m] = String(t).split(':').map(Number);
+            }
+            if (isNaN(h)) return String(t);
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            const h12 = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+            return `${h12}:${(m||0).toString().padStart(2,'0')} ${ampm}`;
+        };
+
+        const formatDate = (dateStr) => {
+            if (!dateStr) return '';
+            const d = new Date(dateStr + 'T12:00:00');
+            return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        };
+
+        const extractTimeFromString = (timeStr) => {
+            if (!timeStr) return '';
+            timeStr = String(timeStr);
+            const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+            if (!match) return '';
+            let h = parseInt(match[1]);
+            const m = match[2];
+            const ampm = match[3].toUpperCase();
+            if (ampm === 'PM' && h < 12) h += 12;
+            if (ampm === 'AM' && h === 12) h = 0;
+            return `${h.toString().padStart(2, '0')}:${m}`;
+        };
+
+        const parseBookingTime = (timeStr) => {
+            if (!timeStr) return null;
+            const match = String(timeStr).match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+            if (!match) return null;
+            let h = parseInt(match[1]);
+            const m = parseInt(match[2]);
+            const ampm = match[3].toUpperCase();
+            if (ampm === 'PM' && h < 12) h += 12;
+            if (ampm === 'AM' && h === 12) h = 0;
+            return h * 60 + m;
+        };
+
+        // Scoring engine
+        const scoreContractors = (contractors, job) => {
+            const jobDate = new Date(job.date + 'T12:00:00');
+            const dayName = jobDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+            const jobTime = job.time;
+            const jobMarket = detectMarket(job.address || '');
+
+            const dayBookings = {};
+            if (bookingsCache) {
+                bookingsCache.filter(b => b.date === job.date).forEach(b => {
+                    const names = (b.contractor || '').split(',').map(n => n.trim().toLowerCase());
+                    names.forEach(name => {
+                        if (!name || name === 'unassigned') return;
+                        if (!dayBookings[name]) dayBookings[name] = [];
+                        const startMin = parseBookingTime(b.timeStr);
+                        let endMin = null;
+                        if (b.endTime) {
+                            const ed = new Date(b.endTime);
+                            endMin = ed.getHours() * 60 + ed.getMinutes();
+                        } else if (b.lengthSec && startMin !== null) {
+                            endMin = startMin + Math.round(b.lengthSec / 60);
+                        }
+                        dayBookings[name].push({
+                            customer: b.customer || b.customerName,
+                            start: startMin,
+                            end: endMin,
+                            startStr: b.timeStr,
+                            address: b.address,
+                            lat: b.lat,
+                            lng: b.lng,
+                        });
+                    });
+                });
+            }
+
+            const vals = contractors.map(c => c.bookingsL28D).sort((a,b) => a - b);
+            const pct = (v) => {
+                const idx = vals.indexOf(v);
+                return vals.length > 1 ? Math.round((idx / (vals.length - 1)) * 100) : 50;
+            };
+
+            const maxNext7D = Math.max(...contractors.map(c => c.bookingsNext7D), 1);
+
+            return contractors.map(c => {
+                const signals = [];
+                const scores = {};
+
+                const cMarket = detectMarketFromCity(c.city);
+                if (jobMarket && cMarket && jobMarket !== cMarket && jobMarket !== 'LA' && cMarket !== 'LA') {
+                    return { ...c, totalScore: -1, signals: [{ text: `Wrong market (${cMarket})`, type: 'bad' }], scores: {}, available: false, availWindow: null };
+                }
+
+                const existingJobs = dayBookings[c.name.toLowerCase()] || [];
+
+                scores.history = pct(c.bookingsL28D);
+                if (c.bookingsL28D >= 15) signals.push({ text: `Experienced — ${c.bookingsL28D} jobs in 28 days`, type: 'good' });
+                else if (c.bookingsL28D >= 5) signals.push({ text: `${c.bookingsL28D} jobs in 28 days`, type: 'neutral' });
+                else if (c.bookingsL28D > 0) signals.push({ text: `Light history — ${c.bookingsL28D} jobs in 28 days`, type: 'warn' });
+                else signals.push({ text: `No recent bookings`, type: 'bad' });
+
+                const jt = jobTime ? timeToMinutes(jobTime) : null;
+                const priorJobs = (existingJobs || []).filter(j => j.end !== null && (jt === null || j.end <= jt));
+                priorJobs.sort((a, b) => (b.end || 0) - (a.end || 0));
+                const lastJob = priorJobs.length > 0 ? priorJobs[0] : null;
+                const fromLat = (lastJob && lastJob.lat) ? lastJob.lat : c.lat;
+                const fromLng = (lastJob && lastJob.lng) ? lastJob.lng : c.lng;
+                const routeFromLabel = (lastJob && lastJob.lat) ? `last job (${lastJob.address ? lastJob.address.split(',')[0] : 'prev job'})` : 'home';
+
+                if (fromLat && fromLng && job.lat && job.lng) {
+                    const dist = haversine(fromLat, fromLng, job.lat, job.lng);
+                    scores.zone = dist < 5 ? 100 : dist < 10 ? 80 : dist < 20 ? 50 : dist < 30 ? 30 : 10;
+                    if (dist < 5) signals.push({ text: `${dist.toFixed(1)} mi from ${routeFromLabel}`, type: 'good' });
+                    else if (dist < 15) signals.push({ text: `${dist.toFixed(1)} mi from ${routeFromLabel}`, type: 'neutral' });
+                    else signals.push({ text: `Far — ${dist.toFixed(1)} mi from ${routeFromLabel}`, type: 'warn' });
+                } else {
+                    const jobCity = extractCity(job.address);
+                    if (c.city && jobCity && c.city.toLowerCase() === jobCity.toLowerCase()) {
+                        scores.zone = 80;
+                        signals.push({ text: `Same city (${c.city})`, type: 'good' });
+                    } else if (c.city) {
+                        scores.zone = 40;
+                        signals.push({ text: `Different area (${c.city})`, type: 'warn' });
+                    } else {
+                        scores.zone = 30;
+                        signals.push({ text: `Location unknown`, type: 'neutral' });
+                    }
+                }
+
+                const loadRatio = c.bookingsNext7D / maxNext7D;
+                scores.workload = Math.round((1 - loadRatio) * 100);
+                if (c.bookingsNext7D === 0) signals.push({ text: `No jobs this week — fully available`, type: 'good' });
+                else if (c.bookingsNext7D <= 3) signals.push({ text: `Light week (${c.bookingsNext7D} jobs)`, type: 'good' });
+                else if (c.bookingsNext7D <= 7) signals.push({ text: `${c.bookingsNext7D} jobs this week`, type: 'neutral' });
+                else signals.push({ text: `Heavy week — ${c.bookingsNext7D} jobs`, type: 'warn' });
+
+                scores.priority = Math.min(c.priority * 10, 100);
+                if (c.priority >= 8) signals.push({ text: `Top-tier contractor`, type: 'good' });
+
+                let available = false;
+                let availWindow = null;
+                if (c.bk && c.bk.slots) {
+                    const slot = c.bk.slots.find(s => s.date && s.date.toLowerCase() === dayName);
+                    if (slot) {
+                        availWindow = `${formatTime(slot.start)} – ${formatTime(slot.end)}`;
+                        available = true;
+                        if (jobTime && slot.start !== undefined && slot.end !== undefined) {
+                            const jt = timeToMinutes(jobTime);
+                            const st = timeToMinutes(slot.start);
+                            const et = timeToMinutes(slot.end);
+                            const fits = jt >= st && jt < et;
+                            if (fits) {
+                                signals.push({ text: `BK hours: ${availWindow}`, type: 'good' });
+                            } else {
+                                signals.push({ text: `BK hours: ${availWindow} — not at requested time`, type: 'warn' });
+                                available = false;
+                            }
+                        } else {
+                            signals.push({ text: `BK hours: ${availWindow}`, type: 'good' });
+                        }
+                    } else {
+                        signals.push({ text: `Not available on ${dayName} (BK)`, type: 'bad' });
+                    }
+                } else {
+                    signals.push({ text: `No BK availability data`, type: 'neutral' });
+                    available = true;
+                }
+
+                if (existingJobs.length > 0) {
+                    existingJobs.forEach(j => {
+                        const timeRange = (j.start !== null && j.end !== null)
+                            ? `${minutesToTime(j.start)} – ${minutesToTime(j.end)}`
+                            : j.startStr || 'time unknown';
+                        signals.push({ text: `Already booked: ${j.customer} (${timeRange})`, type: 'bad' });
+                    });
+
+                    if (jobTime) {
+                        const jt = timeToMinutes(jobTime);
+                        const jobDurationMin = job.durationMin || 180;
+                        const jobEnd = jt + jobDurationMin;
+                        const hasConflict = existingJobs.some(j => {
+                            if (j.start === null || j.end === null) return true;
+                            return jt < j.end && j.start < jobEnd;
+                        });
+                        if (hasConflict) {
+                            signals.push({ text: `Time conflict — job would overlap existing booking`, type: 'bad' });
+                            available = false;
+                        } else {
+                            signals.push({ text: `No time conflict — gaps exist`, type: 'good' });
+                        }
+                    } else {
+                        signals.push({ text: `Has ${existingJobs.length} job(s) this day`, type: 'warn' });
+                        available = false;
+                    }
+                }
+
+                const totalScore = Math.round(
+                    scores.history * 0.40 +
+                    scores.zone * 0.30 +
+                    scores.workload * 0.20 +
+                    scores.priority * 0.10
+                );
+
+                return { ...c, totalScore, signals, scores, available, availWindow };
+            })
+            .filter(c => c.totalScore >= 0)
+            .sort((a, b) => {
+                if (a.available && !b.available) return -1;
+                if (!a.available && b.available) return 1;
+                return b.totalScore - a.totalScore;
+            });
+        };
+
+        // ─── Components ───────────────────────────────────────────────
+
+        const Toast = ({ message, onClose }) => {
+            useEffect(() => {
+                const timer = setTimeout(onClose, 3000);
+                return () => clearTimeout(timer);
+            }, [onClose]);
+
+            return (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 20 }}
+                    className="fixed bottom-4 right-4 bg-gray-800 dark:bg-gray-700 text-white px-4 py-3 rounded-lg shadow-lg z-50"
+                >
+                    {message}
+                </motion.div>
+            );
+        };
+
+        const CircularProgress = ({ value, size = 80, strokeWidth = 8 }) => {
+            const radius = (size - strokeWidth) / 2;
+            const circumference = radius * 2 * Math.PI;
+            const offset = circumference - (value / 100) * circumference;
+            const color = value >= 80 ? '#10b981' : value >= 60 ? '#3b82f6' : value >= 40 ? '#f59e0b' : '#ef4444';
+
+            return (
+                <div className="relative inline-flex items-center justify-center">
+                    <svg width={size} height={size} className="transform -rotate-90">
+                        <circle cx={size/2} cy={size/2} r={radius} stroke="currentColor" strokeWidth={strokeWidth} fill="none" className="text-gray-200 dark:text-gray-700" />
+                        <circle cx={size/2} cy={size/2} r={radius} stroke={color} strokeWidth={strokeWidth} fill="none" strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" className="progress-ring-circle" />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-2xl font-bold" style={{ color }}>{value}</span>
+                    </div>
+                </div>
+            );
+        };
+
+        const Avatar = ({ name, size = 'md' }) => {
+            const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+            const colors = ['bg-blue-500','bg-green-500','bg-purple-500','bg-pink-500','bg-indigo-500','bg-red-500','bg-yellow-500','bg-teal-500'];
+            const color = colors[name.charCodeAt(0) % colors.length];
+            const sizeClasses = { sm: 'w-8 h-8 text-xs', md: 'w-12 h-12 text-sm', lg: 'w-16 h-16 text-lg' };
+            return (
+                <div className={`${sizeClasses[size]} ${color} rounded-full flex items-center justify-center text-white font-semibold`}>
+                    {initials}
+                </div>
+            );
+        };
+
+        const SignalBadge = ({ signal }) => {
+            const icons = { good: '✓', warn: '!', bad: '✕', neutral: 'i' };
+            const colors = {
+                good: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+                warn: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+                bad: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+                neutral: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+            };
+            return (
+                <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${colors[signal.type]}`}>
+                    <span className="font-bold">{icons[signal.type]}</span>
+                    <span>{signal.text}</span>
+                </div>
+            );
+        };
+
+        // Contractor Card Component
+        const ContractorCard = ({ contractor, rank }) => {
+            const [detailsOpen, setDetailsOpen] = useState(false);
+
+            const rankColors = {
+                1: 'border-yellow-400 bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/10',
+                2: 'border-gray-400 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800/20 dark:to-gray-700/10',
+                3: 'border-orange-400 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/10',
+            };
+            const rankBadgeColors = { 1: 'bg-yellow-500', 2: 'bg-gray-500', 3: 'bg-orange-500' };
+            const cardClass = rank <= 3
+                ? `border-2 ${rankColors[rank]}`
+                : 'border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900';
+            const unavailableClass = !contractor.available ? 'opacity-60' : '';
+
+            const copyInfo = () => { navigator.clipboard.writeText(contractor.phone || contractor.name); };
+
+            return (
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`rounded-xl p-5 relative ${cardClass} ${unavailableClass} transition-all`}
+                >
+                    {rank <= 3 && (
+                        <div className={`absolute -top-3 -left-3 w-9 h-9 ${rankBadgeColors[rank]} rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md`}>
+                            {rank}
+                        </div>
+                    )}
+                    <div className="flex items-start gap-4 mb-4">
+                        <Avatar name={contractor.name} size="lg" />
+                        <div className="flex-1 min-w-0">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">{contractor.name}</h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                {contractor.city} • ${contractor.rate}/hr • {contractor.bookingsL28D} jobs/28d
+                            </p>
+                            {contractor.phone && <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">{contractor.phone}</p>}
+                        </div>
+                        <CircularProgress value={contractor.totalScore} size={80} strokeWidth={6} />
+                    </div>
+                    <div className="space-y-2 mb-4">
+                        {contractor.signals.map((signal, idx) => <SignalBadge key={idx} signal={signal} />)}
+                    </div>
+                    <div className="flex gap-2 flex-wrap mb-3">
+                        {contractor.phone && (
+                            <>
+                                <a href={`tel:${contractor.phone}`} className="px-4 py-2 rounded-lg bg-green-500 hover:bg-green-600 text-white text-sm font-medium transition-colors">📞 Call {contractor.firstName}</a>
+                                <a href={`sms:${contractor.phone}`} className="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium transition-colors">💬 Text</a>
+                            </>
+                        )}
+                        <button onClick={copyInfo} className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-medium transition-colors">📋 Copy</button>
+                    </div>
+                    <button onClick={() => setDetailsOpen(!detailsOpen)} className="text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium">
+                        {detailsOpen ? '▼' : '▸'} Score details
+                    </button>
+                    <AnimatePresence>
+                        {detailsOpen && (
+                            <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                className="overflow-hidden"
+                            >
+                                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-2">
+                                    {[
+                                        { label: 'Booking History (40%)', value: contractor.scores.history },
+                                        { label: 'Zone Match (30%)',       value: contractor.scores.zone },
+                                        { label: 'Workload Balance (20%)', value: contractor.scores.workload },
+                                        { label: 'Priority Tier (10%)',    value: contractor.scores.priority },
+                                    ].map((item, idx) => (
+                                        <div key={idx} className="flex justify-between text-sm">
+                                            <span className="text-gray-600 dark:text-gray-400">{item.label}</span>
+                                            <span className="font-medium text-gray-900 dark:text-white">{item.value}/100</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="mt-2 text-xs text-gray-400 dark:text-gray-500 font-mono">Record: {contractor.id}</div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </motion.div>
+            );
+        };
+
+        // Main App
+        const App = () => {
+            const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
+            const [scenario, setScenario] = useState(null);
+            const [selectedBooking, setSelectedBooking] = useState(null);
+            const [contractors, setContractors] = useState([]);
+            const [bookings, setBookings] = useState([]);
+            const [scoredContractors, setScoredContractors] = useState([]);
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState(null);
+            const [toast, setToast] = useState(null);
+            const [settingsOpen, setSettingsOpen] = useState(false);
+            const [bookingFilter, setBookingFilter] = useState('all');
+            const [searchQuery, setSearchQuery] = useState('');
+            const [altDays, setAltDays] = useState([]);
+            const [selectedDay, setSelectedDay] = useState(null);
+
+            const [formDate, setFormDate] = useState('2026-02-25');
+            const [formTime, setFormTime] = useState('');
+            const [formAddress, setFormAddress] = useState('');
+            const [formService, setFormService] = useState('');
+
+            useEffect(() => {
+                if (darkMode) document.documentElement.classList.add('dark');
+                else document.documentElement.classList.remove('dark');
+                localStorage.setItem('darkMode', darkMode);
+            }, [darkMode]);
+
+            const showToast = (msg) => setToast(msg);
+
+            const handleRefresh = () => {
+                clearCache();
+                showToast('Cache cleared — next query will pull fresh data');
+                if (selectedBooking) scoreBooking(selectedBooking);
+            };
+
+            const loadData = async () => {
+                setLoading(true);
+                setError(null);
+                try {
+                    const [c, b] = await Promise.all([loadContractors(), loadBookings()]);
+                    setContractors(c);
+                    setBookings(b);
+                } catch (e) {
+                    setError(e.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const scoreBooking = async (booking) => {
+                setLoading(true);
+                try {
+                    const c = await loadContractors();
+                    const jobTime = extractTimeFromString(booking.timeStr);
+                    const durationHrs = booking.lengthSec ? Math.ceil(booking.lengthSec / 3600) : 3;
+
+                    const scored = scoreContractors(c, {
+                        date: booking.date,
+                        time: jobTime,
+                        address: booking.address,
+                        lat: booking.lat,
+                        lng: booking.lng,
+                        service: booking.service,
+                        durationMin: durationHrs * 60,
+                    });
+
+                    const filtered = scored.filter(contractor => {
+                        if (!booking.contractor) return true;
+                        return !booking.contractor.toLowerCase().includes(contractor.name.toLowerCase());
+                    });
+
+                    setScoredContractors(filtered);
+                    generateAltDays(c, booking);
+                } catch (e) {
+                    setError(e.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const scoreNewBooking = async () => {
+                if (!formDate || !formAddress) { showToast('Enter at least a date and address'); return; }
+                setLoading(true);
+                try {
+                    const c = await loadContractors();
+                    const scored = scoreContractors(c, {
+                        date: formDate,
+                        time: formTime,
+                        address: formAddress,
+                        lat: null,
+                        lng: null,
+                        service: formService,
+                        durationMin: 180
+                    });
+                    setScoredContractors(scored);
+                    generateAltDays(c, { date: formDate, address: formAddress });
+                } catch (e) {
+                    setError(e.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const generateAltDays = (contractors, context) => {
+                const baseDate = new Date(context.date + 'T12:00:00');
+                const days = [];
+                for (let i = 1; i <= 7; i++) {
+                    const d = new Date(baseDate);
+                    d.setDate(baseDate.getDate() + i);
+                    const dateStr = d.toISOString().split('T')[0];
+                    const scored = scoreContractors(contractors, {
+                        date: dateStr, time: '', address: context.address || '', lat: null, lng: null, durationMin: 180
+                    });
+                    const available = scored.filter(c => c.available);
+                    days.push({
+                        date: dateStr,
+                        dayName: d.toLocaleDateString('en-US', { weekday: 'short' }),
+                        dateLabel: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                        available: available.length,
+                        best: available[0] || null
+                    });
+                }
+                setAltDays(days);
+            };
+
+            useEffect(() => { if (scenario === 'replace') loadData(); }, [scenario]);
+            useEffect(() => { if (selectedBooking) scoreBooking(selectedBooking); }, [selectedBooking]);
+
+            const filteredBookings = useMemo(() => {
+                let filtered = bookings;
+                if (bookingFilter !== 'all') {
+                    const now = new Date();
+                    const todayStr = '2026-02-25';
+                    const tomorrowStr = '2026-02-26';
+                    const weekEndStr = '2026-03-04';
+                    if (bookingFilter === 'today') filtered = filtered.filter(b => b.date === todayStr);
+                    else if (bookingFilter === 'tomorrow') filtered = filtered.filter(b => b.date === tomorrowStr);
+                    else if (bookingFilter === 'week') filtered = filtered.filter(b => b.date >= todayStr && b.date <= weekEndStr);
+                }
+                if (searchQuery) {
+                    const q = searchQuery.toLowerCase();
+                    filtered = filtered.filter(b =>
+                        (b.customerName || b.customer || '').toLowerCase().includes(q) ||
+                        b.address.toLowerCase().includes(q) ||
+                        b.contractor.toLowerCase().includes(q)
+                    );
+                }
+                return filtered.slice(0, 50);
+            }, [bookings, bookingFilter, searchQuery]);
+
+            useEffect(() => {
+                const handleKeyDown = (e) => {
+                    if (e.key === 'Escape') {
+                        if (settingsOpen) setSettingsOpen(false);
+                        else if (selectedBooking) setSelectedBooking(null);
+                        else if (scenario) setScenario(null);
+                    }
+                    if (scenario === 'replace' && filteredBookings.length > 0) {
+                        const currentIndex = selectedBooking ? filteredBookings.findIndex(b => b.id === selectedBooking.id) : -1;
+                        if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedBooking(filteredBookings[Math.min(currentIndex + 1, filteredBookings.length - 1)]); }
+                        if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedBooking(filteredBookings[Math.max(currentIndex - 1, 0)]); }
+                    }
+                };
+                window.addEventListener('keydown', handleKeyDown);
+                return () => window.removeEventListener('keydown', handleKeyDown);
+            }, [scenario, selectedBooking, filteredBookings, settingsOpen]);
+
+            const connected = true;
+
+            return (
+                <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
+                    {/* DEMO Banner */}
+                    <div className="bg-yellow-400 dark:bg-yellow-600 text-black dark:text-gray-900 text-center py-2 px-4 font-semibold text-sm">
+                        🎬 DEMO MODE — Los Angeles data · 50 contractors · 40 bookings · no Airtable required
+                    </div>
+
+                    {/* Header */}
+                    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dispatch v2</h1>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Find the right contractor, fast</p>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                        Demo Data Loaded
+                                    </div>
+                                    <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                                        {darkMode ? '☀️' : '🌙'}
+                                    </button>
+                                    <button onClick={() => setSettingsOpen(!settingsOpen)} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">⚙️</button>
+                                    <button onClick={handleRefresh} className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm font-medium text-gray-700 dark:text-gray-200">↻ Refresh</button>
+                                </div>
+                            </div>
+                            <AnimatePresence>
+                                {settingsOpen && (
+                                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mt-4 overflow-hidden">
+                                        <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4">
+                                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                <strong>Demo Mode</strong> — No credentials needed. Using 50 LA-area contractors and 40 bookings spanning Feb 25 – Mar 10, 2026.
+                                            </p>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                    </header>
+
+                    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                        {!scenario && (
+                            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">What's happening?</h2>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setScenario('replace')} className="p-6 rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-400 bg-white dark:bg-gray-900 transition-all">
+                                        <div className="text-4xl mb-3">🔄</div>
+                                        <div className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Replace / Reschedule</div>
+                                        <div className="text-sm text-gray-500 dark:text-gray-400">Find a replacement for an existing booking</div>
+                                    </motion.button>
+                                    <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setScenario('new')} className="p-6 rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-400 bg-white dark:bg-gray-900 transition-all">
+                                        <div className="text-4xl mb-3">🟢</div>
+                                        <div className="text-lg font-semibold text-gray-900 dark:text-white mb-1">New Booking</div>
+                                        <div className="text-sm text-gray-500 dark:text-gray-400">Find contractors for a new job</div>
+                                    </motion.button>
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {scenario === 'replace' && (
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                <div className="lg:col-span-1">
+                                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 sticky top-24">
+                                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Select Booking</h2>
+                                        <input type="text" placeholder="Search customer or address..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm mb-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                                        <div className="flex gap-2 mb-4 flex-wrap">
+                                            {['today','tomorrow','week','all'].map(filter => (
+                                                <button key={filter} onClick={() => setBookingFilter(filter)} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${bookingFilter === filter ? 'bg-blue-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>
+                                                    {filter === 'all' ? 'All Upcoming' : filter.charAt(0).toUpperCase() + filter.slice(1)}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <div className="space-y-2 max-h-[calc(100vh-400px)] overflow-y-auto">
+                                            {loading && !bookings.length && (
+                                                <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="h-20 bg-gray-100 dark:bg-gray-700 rounded-lg shimmer"></div>)}</div>
+                                            )}
+                                            {!loading && filteredBookings.length === 0 && (
+                                                <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">No bookings found</div>
+                                            )}
+                                            {filteredBookings.map((booking, idx) => (
+                                                <motion.button key={booking.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.03 }} onClick={() => setSelectedBooking(booking)}
+                                                    className={`w-full p-3 rounded-lg border text-left transition-all ${selectedBooking?.id === booking.id ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700 bg-white dark:bg-gray-900'}`}>
+                                                    <div className="flex justify-between items-start mb-1">
+                                                        <span className="font-semibold text-sm text-gray-900 dark:text-white">{formatDate(booking.date)}</span>
+                                                        <span className="text-xs text-gray-500 dark:text-gray-400">{booking.service}</span>
+                                                    </div>
+                                                    <div className="text-xs text-gray-600 dark:text-gray-300 mb-1">{booking.customerName || booking.customer}</div>
+                                                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{booking.address}</div>
+                                                    <div className="text-xs text-blue-600 dark:text-blue-400 mt-1 font-medium">{booking.contractor}</div>
+                                                </motion.button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="lg:col-span-2">
+                                    {selectedBooking && scoredContractors.length > 0 && (
+                                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                                            {altDays.length > 0 && (
+                                                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                                                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Alternative Days</h2>
+                                                    <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+                                                        {altDays.map((day, idx) => (
+                                                            <motion.button key={day.date} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.05 }}
+                                                                onClick={() => { setSelectedDay(day.date); showToast('Updating recommendations...'); }}
+                                                                className={`flex-shrink-0 p-4 rounded-lg border text-center min-w-[140px] transition-all ${selectedDay === day.date ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700 bg-white dark:bg-gray-900'}`}>
+                                                                <div className="font-semibold text-gray-900 dark:text-white">{day.dayName}</div>
+                                                                <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">{day.dateLabel}</div>
+                                                                <div className="text-xs text-gray-600 dark:text-gray-300">{day.available} available</div>
+                                                                {day.best && <div className="text-sm font-medium text-gray-900 dark:text-white mt-1">{day.best.firstName} ({day.best.totalScore})</div>}
+                                                            </motion.button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                                                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Recommendations</h2>
+                                                <div className="space-y-4">
+                                                    {scoredContractors.slice(0, 10).map((contractor, idx) => (
+                                                        <ContractorCard key={contractor.id} contractor={contractor} rank={idx + 1} />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                    {selectedBooking && !scoredContractors.length && !loading && (
+                                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center">
+                                            <div className="text-4xl mb-3">🔍</div>
+                                            <div className="text-gray-600 dark:text-gray-400">No contractors available for this booking</div>
+                                        </div>
+                                    )}
+                                    {!selectedBooking && (
+                                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center">
+                                            <div className="text-4xl mb-3">👈</div>
+                                            <div className="text-gray-600 dark:text-gray-400">Select a booking to see recommendations</div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {scenario === 'new' && !scoredContractors.length && (
+                            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 max-w-2xl mx-auto">
+                                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Job Details</h2>
+                                <div className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Date</label>
+                                            <input type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Time</label>
+                                            <select value={formTime} onChange={(e) => setFormTime(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                                <option value="">Pick time...</option>
+                                                {['08:00','08:30','09:00','09:30','10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30','17:00'].map(t => (
+                                                    <option key={t} value={t}>{formatTime(t)}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Address</label>
+                                        <input type="text" value={formAddress} onChange={(e) => setFormAddress(e.target.value)} placeholder="1542 Sunset Blvd, Los Angeles, CA" className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Service Type</label>
+                                        <select value={formService} onChange={(e) => setFormService(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                            <option value="">Any</option>
+                                            <option value="Standard Clean">Standard Clean</option>
+                                            <option value="Deep Clean">Deep Clean</option>
+                                            <option value="Move Out Clean">Move Out Clean</option>
+                                            <option value="Monthly Recurring">Monthly Recurring</option>
+                                        </select>
+                                    </div>
+                                    <button onClick={scoreNewBooking} disabled={loading} className="w-full px-4 py-3 rounded-lg bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white font-medium transition-colors">
+                                        {loading ? 'Finding contractors...' : 'Find Contractors'}
+                                    </button>
+                                    <button onClick={() => setScenario(null)} className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium transition-colors">← Back</button>
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {scenario === 'new' && scoredContractors.length > 0 && (
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                                {altDays.length > 0 && (
+                                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Alternative Days</h2>
+                                        <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+                                            {altDays.map((day, idx) => (
+                                                <motion.button key={day.date} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.05 }}
+                                                    onClick={() => { setFormDate(day.date); scoreNewBooking(); }}
+                                                    className="flex-shrink-0 p-4 rounded-lg border text-center min-w-[140px] border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700 bg-white dark:bg-gray-900 transition-all">
+                                                    <div className="font-semibold text-gray-900 dark:text-white">{day.dayName}</div>
+                                                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">{day.dateLabel}</div>
+                                                    <div className="text-xs text-gray-600 dark:text-gray-300">{day.available} available</div>
+                                                    {day.best && <div className="text-sm font-medium text-gray-900 dark:text-white mt-1">{day.best.firstName} ({day.best.totalScore})</div>}
+                                                </motion.button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Recommendations</h2>
+                                    <div className="space-y-4">
+                                        {scoredContractors.slice(0, 10).map((contractor, idx) => (
+                                            <ContractorCard key={contractor.id} contractor={contractor} rank={idx + 1} />
+                                        ))}
+                                    </div>
+                                    <button onClick={() => { setScoredContractors([]); setAltDays([]); }} className="w-full mt-6 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium transition-colors">← Back</button>
+                                </div>
+                            </motion.div>
+                        )}
+                    </main>
+
+                    <AnimatePresence>
+                        {toast && <Toast message={toast} onClose={() => setToast(null)} />}
+                    </AnimatePresence>
+                </div>
+            );
+        };
+
+        const container = document.getElementById('root');
+        const root = ReactDOM.createRoot(container);
+        root.render(<App />);
+    </script>
+
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</body>
+</html>
