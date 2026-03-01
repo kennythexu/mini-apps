@@ -167,12 +167,17 @@ function computeBlendedFbCpl(last) {
 function sum(arr, key) { return arr.reduce((s, w) => s + (w[key] || 0), 0); }
 
 function render() {
-  const data = DATA[currentMarket].slice(-currentWeeks);
-  const half = Math.floor(data.length / 2);
-  const last = data.slice(-half);
-  const prev = data.slice(0, half);
+  // PoP: take currentWeeks*2 total weeks, split into prev vs last (each = currentWeeks)
+  const allData = DATA[currentMarket];
+  const popTotal = currentWeeks * 2;
+  const popSlice = allData.slice(-popTotal);
+  const fullWeeks = popSlice.filter(w => !w.partial);
+  const half = Math.min(currentWeeks, Math.floor(fullWeeks.length / 2));
+  const last = fullWeeks.slice(-half);
+  const prev = fullWeeks.slice(-(half * 2), -half);
+  const data = allData.slice(-currentWeeks);
 
-  document.getElementById('range-label').textContent = 'L' + half + 'W of ' + currentWeeks + 'W window';
+  document.getElementById('range-label').textContent = 'Last ' + currentWeeks + ' weeks (vs prior ' + currentWeeks + ')';
 
   const fbCpl = getFbCpl(currentMarket) ?? computeBlendedFbCpl(last);
 
@@ -204,8 +209,9 @@ function render() {
   // === KPI summary ===
   const totalSpend = paid.reduce((s, ch) => s + (cur[ch].spend || 0), 0);
   const totalRev = channels.reduce((s, ch) => s + cur[ch].rev, 0);
+  const paidBookings = paid.reduce((s, ch) => s + cur[ch].booked, 0);
   const totalBooked = channels.reduce((s, ch) => s + cur[ch].booked, 0);
-  const blendedCac = totalBooked > 0 ? totalSpend / totalBooked : 0;
+  const blendedCac = paidBookings > 0 ? totalSpend / paidBookings : 0;
   const blendedRoi = totalSpend > 0 ? totalRev / totalSpend : Infinity;
 
   // Margin rates by market
