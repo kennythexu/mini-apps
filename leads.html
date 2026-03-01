@@ -580,7 +580,6 @@ function renderEconomics() {
   if (!allData) return '<div style="color:#555;text-align:center;padding:40px;">No data for this market</div>';
 
   const data = allData.slice(-currentWeeks);
-  const displayWeeks = data.filter(d => !d.partial);
   // For PoP: take 2x currentWeeks, split into current vs prior (both = currentWeeks)
   const popTotal = currentWeeks * 2;
   const popSlice = allData.slice(-popTotal).filter(w => !w.partial);
