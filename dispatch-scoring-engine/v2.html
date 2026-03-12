@@ -399,7 +399,7 @@
                      'Latitude', 'Longitude', '# Bookings L28D', '# Bookings Next 7D',
                      'All Time Bookings #', 'Priority', 'Phone Number', 'First Name', 'Notes',
                      'Skill Types', 'Max Drive Minutes', 'Area Exclusions', 'Area Restrictions',
-                     'Pairing Rules', 'Reliability Tier']
+                     'Pairing Rules', 'Reliability Tier', 'Last Assigned Clean Time']
         });
         contractorsCache = raw
             .filter(r => r.fields['Active'] === true || r.fields['Active'] === 1)
@@ -431,6 +431,7 @@
                     areaRestrictions: f['Area Restrictions'] || '',
                     pairingRules: f['Pairing Rules'] || '',
                     reliabilityTier: f['Reliability Tier'] || '', // A/B/C/Last Resort
+                    lastAssignedClean: f['Last Assigned Clean Time'] || null, // lookup value (array or string)
                 };
             });
         cacheTime = Date.now();
@@ -855,6 +856,27 @@
             if (scoreComponents.zone > 0) parts.push(`Zone cluster (+${scoreComponents.zone})`);
             const breakdownStr = `${parts.join(' + ')} = ${totalRaw}/${MAX_SCORE} → ${normalizedScore}/100`;
 
+            // Compute last assigned clean label
+            let lastCleanLabel = '';
+            if (c.lastAssignedClean) {
+                const raw = Array.isArray(c.lastAssignedClean) ? c.lastAssignedClean[0] : c.lastAssignedClean;
+                if (raw) {
+                    const lastDate = new Date(raw);
+                    if (!isNaN(lastDate)) {
+                        const now = new Date();
+                        const diffDays = Math.floor((now - lastDate) / (1000 * 60 * 60 * 24));
+                        if (diffDays === 0) lastCleanLabel = 'Last clean: today';
+                        else if (diffDays === 1) lastCleanLabel = 'Last clean: yesterday';
+                        else if (diffDays < 7) lastCleanLabel = `Last clean: ${diffDays}d ago`;
+                        else if (diffDays < 30) lastCleanLabel = `Last clean: ${Math.floor(diffDays/7)}w ago`;
+                        else lastCleanLabel = `Last clean: ${Math.floor(diffDays/30)}mo ago`;
+                        if (diffDays > 14) {
+                            signals.push({ text: `Inactive — last clean ${lastCleanLabel.replace('Last clean: ','')}`, type: 'warn' });
+                        }
+                    }
+                }
+            }
+
             scored.push({
                 ...c,
                 totalScore: normalizedScore,
@@ -866,6 +888,7 @@
                 distMiles,
                 isPreferred,
                 tier,
+                lastCleanLabel,
             });
         });
 
@@ -1177,7 +1200,7 @@
                                     <button class="feedback-btn" onclick="logFeedback('${contextBookingId}', '${c.id}', ${i+1}, 'reject', this)" title="Bad recommendation">👎</button>
                                 </span>
                             </div>
-                            <div style="font-size:0.8rem;color:var(--gray-500)">${c.city} • $${c.rate}/hr • ${c.tier}-tier</div>
+                            <div style="font-size:0.8rem;color:var(--gray-500)">${c.city} • $${c.rate}/hr • ${c.tier}-tier${c.lastCleanLabel ? ` • ${c.lastCleanLabel}` : ''}</div>
                         </div>
                         <div class="result-score">${c.totalScore}</div>
                     </div>
