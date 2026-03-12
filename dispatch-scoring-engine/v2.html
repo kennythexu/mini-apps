@@ -875,6 +875,23 @@
         return { scored, excluded };
     }
 
+    // ─── Geocoding (for New Booking flow) ─────────────────────────
+    async function geocodeAddress(address) {
+        if (!address) return { lat: null, lng: null };
+        try {
+            const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`;
+            const res = await fetch(url, { headers: { 'User-Agent': 'RoverDispatch/2.0' } });
+            if (!res.ok) return { lat: null, lng: null };
+            const data = await res.json();
+            if (data.length > 0) {
+                return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+            }
+        } catch (e) {
+            console.warn('Geocode failed:', e);
+        }
+        return { lat: null, lng: null };
+    }
+
     // ─── Geo helpers ──────────────────────────────────────────────
     function haversine(lat1, lng1, lat2, lng2) {
         const R = 3959; // miles
@@ -902,7 +919,21 @@
     function extractCity(address) {
         if (!address) return '';
         const parts = address.split(',').map(s => s.trim());
-        return parts.length >= 2 ? parts[parts.length - 2] : parts[0];
+        // Common format: "1408 Peggy Lane, Kennedale, TX 75142, USA"
+        // or: "1408 Peggy Lane, Kennedale, TX, USA"
+        // City is typically the 2nd part (index 1) in US addresses
+        if (parts.length >= 3) {
+            // parts[1] is usually the city — "Kennedale"
+            // But also check against state abbreviations to skip if needed
+            const candidate = parts[1];
+            // If it looks like a state (2 letters) or zip, try parts[0] split
+            if (/^[A-Z]{2}(\s+\d{5})?$/.test(candidate)) {
+                return parts[0]; // fallback
+            }
+            return candidate;
+        }
+        // Fallback for short addresses
+        return parts.length >= 2 ? parts[0] : parts[0];
     }
 
     function formatTime(t) {
@@ -1066,11 +1097,15 @@
 
         if (!date || !address) { toast('Enter at least a date and address'); return; }
 
-        toast('Finding contractors...');
+        toast('Geocoding address...');
         try {
-            const contractors = await loadContractors();
+            const [contractors, geo] = await Promise.all([
+                loadContractors(),
+                geocodeAddress(address)
+            ]);
             await Promise.all([loadContacts(), loadZones(), loadBookings()]);
-            const result = scoreContractors(contractors, { date, time, address, lat: null, lng: null, service, durationMin: 180, market, contactIds: [], zoneIds: [] });
+            if (!geo.lat) toast('⚠️ Could not geocode address — distance scoring disabled');
+            const result = scoreContractors(contractors, { date, time, address, lat: geo.lat, lng: geo.lng, service, durationMin: 180, market, contactIds: [], zoneIds: [] });
             renderResults(result.scored, result.excluded, { date, address, service }, 'standalone-results-container', 'standalone-refresh-info', 'standalone-excluded-container');
             renderAltDays(contractors, { date, address }, 'standalone-alt-days');
             document.getElementById('standalone-alt-days-card').classList.remove('hidden');
