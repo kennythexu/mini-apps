@@ -399,7 +399,7 @@
                      'Latitude', 'Longitude', '# Bookings L28D', '# Bookings Next 7D',
                      'All Time Bookings #', 'Priority', 'Phone Number', 'First Name', 'Notes',
                      'Skill Types', 'Max Drive Minutes', 'Area Exclusions', 'Area Restrictions',
-                     'Pairing Rules', 'Reliability Tier', 'Last Assigned Clean Time']
+                     'Pairing Rules', 'Reliability Tier', 'Last Assigned Clean Time', 'Avg Margin %']
         });
         contractorsCache = raw
             .filter(r => r.fields['Active'] === true || r.fields['Active'] === 1)
@@ -432,6 +432,7 @@
                     pairingRules: f['Pairing Rules'] || '',
                     reliabilityTier: f['Reliability Tier'] || '', // A/B/C/Last Resort
                     lastAssignedClean: f['Last Assigned Clean Time'] || null, // lookup value (array or string)
+                    avgMargin: f['Avg Margin %'] || null,
                 };
             });
         cacheTime = Date.now();
@@ -585,7 +586,7 @@
             return 4; // bottom
         }
 
-        const MAX_SCORE = 150;
+        const MAX_SCORE = 158;
         const excluded = [];
         const scored = [];
 
@@ -804,6 +805,23 @@
             }
             if (clusterSignal) signals.push({ text: clusterSignal, type: 'good' });
 
+            // 8. Margin (0-8)
+            scoreComponents.margin = 0;
+            if (c.avgMargin !== null) {
+                const marginPct = c.avgMargin * 100; // convert from decimal
+                if (marginPct > 55) scoreComponents.margin = 8;
+                else if (marginPct > 50) scoreComponents.margin = 6;
+                else if (marginPct > 45) scoreComponents.margin = 4;
+                else if (marginPct > 40) scoreComponents.margin = 2;
+                // else 0
+                totalRaw += scoreComponents.margin;
+
+                // Margin signal
+                if (marginPct > 50) signals.push({ text: `High margin (${marginPct.toFixed(0)}%) 💰`, type: 'good' });
+                else if (marginPct >= 40) signals.push({ text: `Margin ${marginPct.toFixed(0)}%`, type: 'neutral' });
+                else signals.push({ text: `Low margin (${marginPct.toFixed(0)}%) ⚠️`, type: 'warn' });
+            }
+
             // ─── Additional informational signals ───
 
             // Max drive signal
@@ -854,6 +872,7 @@
             parts.push(`Workload (+${scoreComponents.workload})`);
             parts.push(`Experience (+${scoreComponents.history})`);
             if (scoreComponents.zone > 0) parts.push(`Zone cluster (+${scoreComponents.zone})`);
+            if (scoreComponents.margin > 0) parts.push(`Margin (+${scoreComponents.margin})`);
             const breakdownStr = `${parts.join(' + ')} = ${totalRaw}/${MAX_SCORE} → ${normalizedScore}/100`;
 
             // Compute last assigned clean label
@@ -1200,7 +1219,7 @@
                                     <button class="feedback-btn" onclick="logFeedback('${contextBookingId}', '${c.id}', ${i+1}, 'reject', this)" title="Bad recommendation">👎</button>
                                 </span>
                             </div>
-                            <div style="font-size:0.8rem;color:var(--gray-500)">${c.city} • $${c.rate}/hr • ${c.tier}-tier${c.lastCleanLabel ? ` • ${c.lastCleanLabel}` : ''}</div>
+                            <div style="font-size:0.8rem;color:var(--gray-500)">${c.city} • $${c.rate}/hr • ${c.tier}-tier${c.avgMargin !== null ? ` • ${(c.avgMargin * 100).toFixed(0)}% margin` : ''}${c.lastCleanLabel ? ` • ${c.lastCleanLabel}` : ''}</div>
                         </div>
                         <div class="result-score">${c.totalScore}</div>
                     </div>
@@ -1226,8 +1245,9 @@
                         <div class="score-row"><span>Workload Balance</span><span>+${c.scoreComponents.workload || 0} / 15</span></div>
                         <div class="score-row"><span>Experience (L28D)</span><span>+${c.scoreComponents.history || 0} / 10</span></div>
                         <div class="score-row"><span>Zone Clustering</span><span>+${c.scoreComponents.zone || 0} / 10</span></div>
+                        <div class="score-row"><span>Margin</span><span>+${c.scoreComponents.margin || 0} / 8</span></div>
                         <div class="score-row" style="font-weight:600; border-top:1px solid var(--gray-200); margin-top:0.25rem; padding-top:0.25rem">
-                            <span>Total</span><span>${c.totalRaw} / 150 → ${c.totalScore}/100</span>
+                            <span>Total</span><span>${c.totalRaw} / 158 → ${c.totalScore}/100</span>
                         </div>
                     </div>
 
